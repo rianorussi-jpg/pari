@@ -5,7 +5,7 @@ import './styles.css'
 
 const venues=[
  {id:'annua',name:'Annua',area:'CDMX',distance:'2.1 km',music:'House · Open format',tag:'Popular',image:'https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2?auto=format&fit=crop&w=1000&q=80'},
- {id:'faunna',name:'Faunna',area:'CDMX',distance:'2.8 km',music:'Reggaetón · Hits',tag:'Hoy',image:'https://images.unsplash.com/photo-1571266028243-d220c9c3b2d2?auto=format&fit=crop&w=1000&q=80'},
+ {id:'faunna',name:'Faunna',area:'CDMX',distance:'2.8 km',music:'Reggaetón · Hits',tag:'Hoy',image:'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1000&q=80'},
  {id:'janis',name:'Janis',area:'CDMX',distance:'3.4 km',music:'Open format · House',tag:'Trending',image:'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1000&q=80'},
  {id:'mezontle',name:'Mezontle',area:'CDMX',distance:'4.1 km',music:'Reggaetón · Electronic',tag:'Últimos lugares',image:'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1000&q=80'}
 ]
