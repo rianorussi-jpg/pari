@@ -1,0 +1,11 @@
+{
+  "name": "pari-platform",
+  "private": true,
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev:client": "npm --workspace @pari/client run dev",
+    "dev:business": "npm --workspace @pari/business run dev",
+    "dev:admin": "npm --workspace @pari/admin run dev",
+    "build": "npm run build --workspaces"
+  }
+}
