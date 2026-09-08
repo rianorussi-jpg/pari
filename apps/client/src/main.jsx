@@ -4,15 +4,15 @@ import {Home,Compass,Map,CalendarDays,User,Search,MapPin,ChevronRight,Heart,Shar
 import './styles.css'
 
 const venues=[
- {id:'looloo',name:'LooLoo',area:'Juárez',distance:'1.8 km',music:'House · Techno',tag:'Popular',image:'https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2?auto=format&fit=crop&w=1000&q=80'},
- {id:'funk',name:'Funk Club',area:'Roma Norte',distance:'2.6 km',music:'House · Disco',tag:'Hoy',image:'https://images.unsplash.com/photo-1571266028243-d220c9c3b2d2?auto=format&fit=crop&w=1000&q=80'},
- {id:'phonique',name:'Phonique',area:'Polanco',distance:'4.2 km',music:'Open format · Hits',tag:'Trending',image:'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1000&q=80'},
- {id:'departamento',name:'Departamento',area:'Roma Norte',distance:'2.9 km',music:'Electronic · Indie',tag:'Últimos lugares',image:'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1000&q=80'}
+ {id:'annua',name:'Annua',area:'CDMX',distance:'2.1 km',music:'House · Open format',tag:'Popular',image:'https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2?auto=format&fit=crop&w=1000&q=80'},
+ {id:'faunna',name:'Faunna',area:'CDMX',distance:'2.8 km',music:'Reggaetón · Hits',tag:'Hoy',image:'https://images.unsplash.com/photo-1571266028243-d220c9c3b2d2?auto=format&fit=crop&w=1000&q=80'},
+ {id:'janis',name:'Janis',area:'CDMX',distance:'3.4 km',music:'Open format · House',tag:'Trending',image:'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1000&q=80'},
+ {id:'mezontle',name:'Mezontle',area:'CDMX',distance:'4.1 km',music:'Reggaetón · Electronic',tag:'Últimos lugares',image:'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1000&q=80'}
 ]
 const events=[
- {id:1,venue:'LooLoo',title:'Saturday Ritual',date:'Vie 11 Sep',time:'10:30 PM',price:'Reservaciones abiertas',image:'https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?auto=format&fit=crop&w=1000&q=80'},
- {id:2,venue:'Funk Club',title:'After Hours',date:'Sáb 12 Sep',time:'10:00 PM',price:'Lista disponible',image:'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1000&q=80'},
- {id:3,venue:'Phonique',title:'Noche 00s',date:'Sáb 12 Sep',time:'9:30 PM',price:'Reserva tu lugar',image:'https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=1000&q=80'}
+ {id:1,venue:'Annua',title:'Saturday Ritual',date:'Vie 11 Sep',time:'10:30 PM',price:'Reservaciones abiertas',image:'https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?auto=format&fit=crop&w=1000&q=80'},
+ {id:2,venue:'Faunna',title:'After Hours',date:'Sáb 12 Sep',time:'10:00 PM',price:'Lista disponible',image:'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1000&q=80'},
+ {id:3,venue:'Janis',title:'Noche 00s',date:'Sáb 12 Sep',time:'9:30 PM',price:'Reserva tu lugar',image:'https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=1000&q=80'}
 ]
 const tabs=[['home','Inicio',Home],['explore','Explorar',Compass],['map','Mapa',Map],['plans','Planes',CalendarDays],['profile','Perfil',User]]
 
