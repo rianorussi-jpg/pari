@@ -10,10 +10,10 @@ const venues=[
  {id:'mezontle',name:'Mezontle',area:'CDMX',distance:'4.1 km',music:'Reggaetón · Electronic',tag:'Últimos lugares',image:'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1000&q=80',description:'Una mezcla de electrónica y reggaetón con noches temáticas, invitados y sets especiales.',promo:'Lista especial disponible en eventos seleccionados.'}
 ]
 const events=[
- {id:1,venueId:'annua',venue:'Annua',title:'Saturday Ritual',date:'Vie 11 Sep',fullDate:'2026-09-11',time:'10:30 PM',price:'Reservaciones abiertas',image:'https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?auto=format&fit=crop&w=1000&q=80'},
- {id:2,venueId:'faunna',venue:'Faunna',title:'After Hours',date:'Sáb 12 Sep',fullDate:'2026-09-12',time:'10:00 PM',price:'Lista disponible',image:'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1000&q=80'},
- {id:3,venueId:'janis',venue:'Janis',title:'Noche 00s',date:'Sáb 12 Sep',fullDate:'2026-09-12',time:'9:30 PM',price:'Reserva tu lugar',image:'https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=1000&q=80'},
- {id:4,venueId:'mezontle',venue:'Mezontle',title:'Neón',date:'Vie 18 Sep',fullDate:'2026-09-18',time:'11:00 PM',price:'Reservaciones abiertas',image:'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1000&q=80'}
+ {id:1,venue:'Lienzo Charro Miguel Hidalgo',title:'Noche Mexicana',date:'Mar 15 Sep',fullDate:'2026-09-15',time:'8:00 PM',price:'$350',ticketPrice:350,image:'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=1200&q=88'},
+ {id:2,venue:'Foro Indie Rocks!',title:'Halloween: La Noche de las Sombras',date:'Sáb 31 Oct',fullDate:'2026-10-31',time:'9:00 PM',price:'$480',ticketPrice:480,image:'https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=1200&q=88'},
+ {id:3,venue:'Jardín Lomas Altas',title:'White Party CDMX',date:'Sáb 21 Nov',fullDate:'2026-11-21',time:'7:30 PM',price:'$650',ticketPrice:650,image:'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=88'},
+ {id:4,venue:'Frontón México',title:'Neon Fest',date:'Vie 04 Dic',fullDate:'2026-12-04',time:'9:30 PM',price:'$590',ticketPrice:590,image:'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1200&q=88'}
 ]
 const initialPosts=[
  {id:1,user:'Fer',place:'Faunna',time:'Hace 18 min',text:'¿Quién cae hoy? Se está armando buen plan 🔥',likes:28,comments:6,image:'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1000&q=80'},
@@ -23,14 +23,15 @@ const initialPosts=[
 const tabs=[['home','Inicio',Home],['explore','Explorar',Compass],['wall','Muro',MessageCircle],['plans','Planes',CalendarDays],['profile','Perfil',User]]
 
 function App(){
- const [tab,setTab]=useState('home'); const [selected,setSelected]=useState(null); const [selectedEvent,setSelectedEvent]=useState(null); const [liked,setLiked]=useState([])
+ const [tab,setTab]=useState('home'); const [selected,setSelected]=useState(null); const [selectedEvent,setSelectedEvent]=useState(null); const [standaloneEvent,setStandaloneEvent]=useState(null); const [liked,setLiked]=useState([])
  const title=tab==='home'?'Pari':tab==='explore'?'Explorar':tab==='wall'?'Muro':tab==='plans'?'Mis planes':'Perfil'
  const openVenue=v=>setSelected(v)
+ if(standaloneEvent) return <EventDetail event={standaloneEvent} onBack={()=>setStandaloneEvent(null)}/>
  if(selected) return <Venue venue={selected} onBack={()=>setSelected(null)} liked={liked.includes(selected.id)} toggleLike={()=>setLiked(x=>x.includes(selected.id)?x.filter(i=>i!==selected.id):[...x,selected.id])} initialEvent={selectedEvent} clearEvent={()=>setSelectedEvent(null)} />
  return <div className="app-shell"><main className="screen">
    <header className="topbar"><div><p className="eyebrow">CDMX · ESTA NOCHE</p><h1>{title}</h1></div><button className="avatar">SR</button></header>
-   {tab==='home'&&<HomeView openVenue={openVenue} openEvent={e=>{setSelectedEvent(e);openVenue(venues.find(v=>v.id===e.venueId))}}/>}
-   {tab==='explore'&&<ExploreView openVenue={openVenue} openEvent={e=>{setSelectedEvent(e);openVenue(venues.find(v=>v.id===e.venueId))}}/>}
+   {tab==='home'&&<HomeView openVenue={openVenue} openEvent={e=>setStandaloneEvent(e)}/>}
+   {tab==='explore'&&<ExploreView openVenue={openVenue} openEvent={e=>setStandaloneEvent(e)}/>}
    {tab==='wall'&&<WallView/>}
    {tab==='plans'&&<PlansView setTab={setTab}/>} 
    {tab==='profile'&&<ProfileView/>}
@@ -59,6 +60,8 @@ function ExploreView({openVenue,openEvent}){
    <div className="spacer"/>
  </>
 }
+
+function EventDetail({event,onBack}){const [qty,setQty]=useState(1);const [done,setDone]=useState(false);if(done)return <div className="subpage ticket-success"><CheckCircle2/><p className="eyebrow">BOLETOS PARI</p><h1>¡Tus boletos están listos!</h1><p>{qty} boleto{qty>1?'s':''} para <b>{event.title}</b>.</p><div className="ticket-total"><span>Total</span><strong>${(event.ticketPrice*qty).toLocaleString('es-MX')} MXN</strong></div><button className="primary" onClick={onBack}>Volver a eventos</button></div>;return <div className="event-detail"><div className="event-detail-hero" style={{backgroundImage:`url(${event.image})`}}><div className="event-detail-shade"/><button className="circle back" onClick={onBack}><ChevronLeft/></button><div className="event-detail-copy"><span>{event.date}</span><h1>{event.title}</h1><p><MapPin size={14}/>{event.venue}</p></div></div><div className="event-detail-body"><div className="event-facts"><span><Calendar size={16}/>{event.date}</span><span><Clock size={16}/>{event.time}</span></div><h2>Boletos</h2><div className="ticket-picker"><div><small>Acceso general</small><strong>{event.price} MXN</strong><span>por persona</span></div><div className="ticket-stepper"><button onClick={()=>setQty(Math.max(1,qty-1))}>−</button><b>{qty}</b><button onClick={()=>setQty(Math.min(10,qty+1))}>+</button></div></div><div className="ticket-summary"><span>Total</span><strong>${(event.ticketPrice*qty).toLocaleString('es-MX')} MXN</strong></div><button className="primary buy-ticket" onClick={()=>setDone(true)}><Ticket size={18}/> Comprar {qty} boleto{qty>1?'s':''}</button></div></div>}
 
 function MapView({openVenue,onBack}){return <div className="subpage"><div className="subpage-head"><button className="circle" onClick={onBack}><ChevronLeft/></button><div><p className="eyebrow">EXPLORAR</p><h1>Mapa</h1></div></div><div className="mapbox"><div className="map-noise"></div>{venues.map((v,i)=><button className={'pin p'+i} key={v.id} onClick={()=>openVenue(v)}><MapPin size={16}/><span>{v.name}</span></button>)}<button className="locate"><Navigation size={17}/></button></div><Section title="Cerca de ti" subtitle="Con actividad esta noche"><div className="mini-list">{venues.slice(0,3).map(v=><VenueRow v={v} key={v.id} onClick={()=>openVenue(v)}/>)}</div></Section></div>}
 
