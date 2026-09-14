@@ -159,8 +159,8 @@ returns trigger language plpgsql security definer set search_path = '' as $$
 declare invitation record;
 begin
   select * into invitation from public.pari_venue_member_invites where lower(email)=lower(new.email) limit 1;
-  insert into public.pari_profiles (id,email,full_name,role)
-  values (new.id,new.email,coalesce(new.raw_user_meta_data->>'full_name',''),case when invitation.id is not null then 'business' else 'client' end)
+  insert into public.pari_profiles (id,email,full_name,phone,role)
+  values (new.id,new.email,coalesce(new.raw_user_meta_data->>'full_name',''),coalesce(new.raw_user_meta_data->>'phone',''),case when invitation.id is not null then 'business' else 'client' end)
   on conflict (id) do nothing;
   if invitation.id is not null then
     insert into public.pari_venue_members (venue_id,user_id,role) values (invitation.venue_id,new.id,invitation.role)

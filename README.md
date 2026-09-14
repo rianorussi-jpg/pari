@@ -58,3 +58,7 @@ Framework: Vite. Build: `npm run build`. Output: `dist`.
 ## Siguiente etapa
 
 Falta conectar Auth del cliente, creación real de reservas, compra de boletos, muro, uploads de imágenes y acciones de edición desde el panel de negocios.
+
+
+## Cliente real (Auth / reservaciones / planes)
+Si ya habías corrido `supabase/setup.sql` antes de esta versión, corre también `supabase/patch-client-real.sql` para actualizar el trigger de nuevos usuarios y guardar nombre/celular desde Auth.

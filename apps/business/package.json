@@ -1,5 +1,5 @@
 {
-  "name": "pari-business",
+  "name": "@pari/business",
   "private": true,
   "version": "0.1.0",
   "type": "module",
