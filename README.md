@@ -62,3 +62,26 @@ Falta conectar Auth del cliente, creación real de reservas, compra de boletos, 
 
 ## Cliente real (Auth / reservaciones / planes)
 Si ya habías corrido `supabase/setup.sql` antes de esta versión, corre también `supabase/patch-client-real.sql` para actualizar el trigger de nuevos usuarios y guardar nombre/celular desde Auth.
+
+## Patch operativo (reservas, imágenes, muro y paneles)
+Si ya corriste `setup.sql` y `patch-client-real.sql`, ejecuta también:
+
+`supabase/patch-operacion-completa.sql`
+
+Este patch agrega `auto_accept_reservations`, crea el bucket público `pari-media`, habilita avatars/portadas/galerías y añade las policies de Business/Admin.
+
+### Activar el panel Admin
+El panel general ahora exige una cuenta con `role = 'admin'`.
+1. Crea el usuario en Supabase Authentication.
+2. Después corre, cambiando el correo:
+
+```sql
+update public.pari_profiles
+set role = 'admin'
+where email = 'tu-correo@dominio.com';
+```
+
+### Qué quedó conectado
+- Business: reservaciones, aceptar/rechazar, auto/manual, eventos, check-in, portada, galería, promociones y datos del antro.
+- Cliente: reserva automática/manual real, perfil con vista + edición separada, avatar, muro con likes/comentarios y fotos de perfil.
+- Admin: login por rol admin, negocios, usuarios, eventos, reservaciones/boletos, muro y moderación.
