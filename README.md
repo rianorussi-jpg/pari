@@ -2,7 +2,7 @@
 
 Plataforma de eventos y boletos sobre las tablas existentes `pari_`. Monorepo Vite + React con tres aplicaciones:
 
-- `apps/client`: catálogo, filtros por ciudad/categoría/fecha, cuentas, perfiles y boletos.
+- `apps/client`: catálogo, filtros por ciudad/categoría/fecha, favoritos en este dispositivo, cuentas, perfiles y checkout separado en tres pasos (boletos, asistente y pago).
 - `apps/business`: creación y administración de eventos, ventas y control de acceso.
 - `apps/admin`: administración de eventos y verificación de organizadores (requiere `pari_profiles.role = 'admin'`).
 
@@ -27,7 +27,7 @@ Configurar en cada aplicación las variables del archivo `.env.example`. Solo se
 
 La migración `supabase/migrations/20261116223846_ticket_pari.sql` (también disponible como `supabase/patch-ticket-pari.sql`) se aplica sobre la base que ya tiene `setup.sql`, `patch-client-real.sql` y `patch-operacion-completa.sql`. No volver a ejecutar el setup en una base existente. La migración conserva eventos, perfiles, órdenes y datos de antros anteriores.
 
-Agrega propietario de evento, ciudad, categoría, zona horaria, verificación y campos de compras de prueba. Las cuentas con membresías anteriores pueden seguir administrando los eventos de sus lugares; cualquier cuenta puede crear eventos nuevos sin tener un antro.
+Agrega propietario de evento, ciudad, categoría, zona horaria, verificación y campos de compras de prueba. Las cuentas con membresías anteriores pueden seguir administrando los eventos de sus lugares; solo las cuentas autorizadas con rol business o admin pueden crear eventos nuevos. El administrador puede autorizar o retirar ese acceso desde Accesos y verificación.
 
 Cada evento usa una zona horaria explícita. Los horarios se capturan en la hora local del evento y se guardan en UTC. El catálogo permite cualquier ciudad; el filtro muestra las ciudades con eventos futuros publicados.
 
@@ -48,3 +48,9 @@ Proyectos existentes: `pari-client`, `pari-business` y `pari-admin`. Cada proyec
 ## Pruebas
 
 `npm test` ejecuta las migraciones contra PostgreSQL embebido (PGlite) y verifica RLS, propietario, acceso anónimo, protección de roles, verificación administrativa, compra simulada, inventario, idempotencia, privacidad de órdenes y rechazo de doble ingreso. También valida conversiones de zona horaria y horarios inexistentes por cambio de horario.
+
+## Checkout y acceso reservado
+
+Aplicar `supabase/migrations/20261116233225_curated_organizers_checkout.sql` (copia: `supabase/patch-checkout-organizers.sql`) después de la migración Ticket Pari. Añade datos de asistente a las órdenes con los mismos permisos de lectura existentes. La función `pari_checkout_demo` valida estos datos y usa la compra transaccional existente. Los reintentos no cambian al asistente ni duplican el inventario.
+
+La aplicación de clientes no ofrece crear eventos ni presenta Organizar en su navegación. Guardados conserva IDs de eventos en localStorage, por cuenta/dispositivo; no sincroniza favoritos entre dispositivos. El panel business requiere una cuenta autorizada. Verificación de identidad y autorización para organizar son controles separados. Las cuentas de asistentes no pueden darse permisos a sí mismas. Retirar el acceso de organizador bloquea administración, órdenes e ingreso de sus eventos. Los datos y eventos existentes se conservan.
