@@ -23,8 +23,11 @@ import {
   X,
   ChevronRight,
   Download,
+  Heart,
 } from "lucide-react";
 import "./ticket.css";
+import Checkout from "./Checkout.jsx";
+import { useSavedEvents, canOrganize } from "./saved.mjs";
 import {
   zones,
   dateInZone as date,
@@ -35,7 +38,7 @@ const money = (n) =>
   new Intl.NumberFormat("es-MX", {
     style: "currency",
     currency: "MXN",
-    maximumFractionDigits: 0,
+    maximumFractionDigits: 2,
   }).format(Number(n || 0));
 const cats = [
   ["Todos", Sparkles],
@@ -58,6 +61,12 @@ export default function TicketApp({ db, mode = "client" }) {
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
     [refresh, setRefresh] = useState(0);
+  const [saved, toggleSaved] = useSavedEvents(session?.user?.id);
+  const organizerAllowed = canOrganize(profile);
+  const openEvent = (event) => {
+    setSelected(event);
+    window.scrollTo(0, 0);
+  };
   const reload = () => setRefresh((x) => x + 1);
   useEffect(() => {
     if (!db) {
@@ -151,17 +160,19 @@ export default function TicketApp({ db, mode = "client" }) {
             Mis boletos
           </button>
           <button
-            className={view === "manage" ? "active" : ""}
-            onClick={() => go("manage")}
+            className={view === "saved" ? "active" : ""}
+            onClick={() => go("saved")}
           >
-            Organizadores
+            Guardados
           </button>
         </nav>
         <div className="header-actions">
-          <button className="publish" onClick={() => go("create")}>
-            <Plus size={16} />
-            Crear evento
-          </button>
+          {mode !== "client" && organizerAllowed && (
+            <button className="publish" onClick={() => go("create")}>
+              <Plus size={16} />
+              Crear evento
+            </button>
+          )}
           <button className="account" onClick={auth}>
             {profile?.avatar_url ? (
               <img src={profile.avatar_url} alt="Tu foto" />
@@ -188,6 +199,7 @@ export default function TicketApp({ db, mode = "client" }) {
             event={selected}
             db={db}
             session={session}
+            profile={profile}
             back={() => {
               setSelected(null);
               window.scrollTo(0, 0);
@@ -204,7 +216,17 @@ export default function TicketApp({ db, mode = "client" }) {
               setSelected(event);
               window.scrollTo(0, 0);
             }}
-            create={() => go("create")}
+            saved={saved}
+            toggleSaved={toggleSaved}
+          />
+        ) : view === "saved" ? (
+          <SavedEvents
+            events={events}
+            loading={loading}
+            saved={saved}
+            toggleSaved={toggleSaved}
+            open={openEvent}
+            explore={() => go("discover")}
           />
         ) : view === "profile" ? (
           <Profile
@@ -213,11 +235,24 @@ export default function TicketApp({ db, mode = "client" }) {
             profile={profile}
             reload={reload}
             manage={() => go("manage")}
+            organizerAllowed={organizerAllowed}
           />
         ) : !session ? (
           <Auth db={db} />
         ) : view === "tickets" ? (
           <MyTickets db={db} session={session} />
+        ) : (view === "create" || view === "manage") && !profile ? (
+          <Empty title="Comprobando acceso…" />
+        ) : (view === "create" || view === "manage") && !organizerAllowed ? (
+          <Empty title="Este espacio es para organizadores autorizados">
+            <p>
+              Descubre tu próximo evento y encuentra tus boletos desde tu
+              cuenta.
+            </p>
+            <button className="primary" onClick={() => go("discover")}>
+              Explorar eventos
+            </button>
+          </Empty>
         ) : view === "create" ? (
           <EventForm
             db={db}
@@ -254,7 +289,7 @@ export default function TicketApp({ db, mode = "client" }) {
         {[
           ["discover", "Explorar", Search],
           ["tickets", "Boletos", Ticket],
-          ["manage", "Organizar", LayoutDashboard],
+          ["saved", "Guardados", Heart],
           ["profile", "Perfil", UserRound],
         ].map(([v, t, I]) => (
           <button
@@ -302,7 +337,7 @@ function Verified() {
     </BadgeCheck>
   );
 }
-function Discover({ events, loading, open, create }) {
+function Discover({ events, loading, open, saved, toggleSaved }) {
   const [q, setQ] = useState(""),
     [category, setCategory] = useState("Todos"),
     [when, setWhen] = useState("all"),
@@ -477,6 +512,8 @@ function Discover({ events, loading, open, create }) {
                   event={e}
                   open={() => open(e)}
                   index={i}
+                  saved={saved.includes(e.id)}
+                  onSave={() => toggleSaved(e.id)}
                 />
               ))}
             </div>
@@ -491,7 +528,7 @@ function Discover({ events, loading, open, create }) {
               <p>
                 {events.length
                   ? "Prueba otra categoría, fecha o búsqueda."
-                  : "Sé de los primeros en publicar un evento en Ticket Pari."}
+                  : "Los próximos eventos aparecerán aquí. Vuelve pronto para descubrir nuevos planes."}
               </p>
               <button
                 className="primary"
@@ -503,109 +540,167 @@ function Discover({ events, loading, open, create }) {
                         setWhen("all");
                         setCity("all");
                       }
-                    : create
+                    : () => {
+                        setQ("");
+                        setCategory("Todos");
+                        setWhen("all");
+                        setCity("all");
+                      }
                 }
               >
-                {events.length ? "Ver todos los eventos" : "Crear mi evento"}
+                {events.length ? "Ver todos los eventos" : "Explorar eventos"}
                 <ArrowUpRight size={17} />
               </button>
             </Empty>
           )}
         </div>
       </section>
-      <section className="organizer-banner">
+      <section className="organizer-banner attendee-banner">
         <div>
-          <span className="eyebrow">
-            TÚ PONES EL EVENTO. NOSOTROS EL BOLETO.
-          </span>
+          <span className="eyebrow">MENOS VUELTAS. MÁS PLANES.</span>
           <h2>
-            Haz que tu idea
+            Encuentra el evento.
             <br />
-            se vuelva un <em>lleno total.</em>
+            Vive la <em>experiencia.</em>
           </h2>
-          <p>
-            Crea tu evento, vende boletos y lleva el control en un solo lugar.
-          </p>
-          <button className="primary" onClick={create}>
-            Quiero organizar un evento
+          <p>Elige tu plan, compra tus boletos y llévalos siempre contigo.</p>
+          <button
+            className="primary"
+            onClick={() =>
+              document
+                .getElementById("events")
+                ?.scrollIntoView({ behavior: "smooth" })
+            }
+          >
+            Descubrir eventos
             <ArrowUpRight size={18} />
           </button>
         </div>
         <div className="decor-ticket">
           <Ticket size={60} />
           <b>
-            EL PRÓXIMO
+            TU PRÓXIMO
             <br />
             GRAN PLAN
           </b>
-          <span>Lo organizas tú.</span>
+          <span>Aquí empieza la historia.</span>
           <i>✦ TICKET PARI ✦</i>
         </div>
       </section>
     </>
   );
 }
-function EventCard({ event: e, open, index = 0 }) {
+function EventCard({ event: e, open, index = 0, saved = false, onSave }) {
   const d = new Date(e.starts_at);
   return (
-    <button className="event-card" onClick={open}>
-      <div className="card-image">
-        <img src={e.image_url || img} alt="" loading="lazy" />
-        <span className="card-category">{e.category || "Evento"}</span>
-        {e.description?.startsWith("[Evento de ejemplo]") && (
-          <span className="example-label">Ejemplo</span>
-        )}
-        {Number(e.ticket_inventory) === 0 && e.ticket_inventory !== null && (
-          <span className="sold-out">Agotado</span>
-        )}
-        <span className="card-arrow">
-          <ArrowUpRight size={20} />
-        </span>
-      </div>
-      <div className="card-body">
-        <div className="date-block">
-          <b>
-            {d.toLocaleDateString("es-MX", {
-              day: "2-digit",
-              timeZone: e.time_zone || "America/Mexico_City",
-            })}
-          </b>
-          <span>
-            {d
-              .toLocaleDateString("es-MX", {
-                month: "short",
-                timeZone: e.time_zone || "America/Mexico_City",
-              })
-              .replace(".", "")}
+    <article className="event-card">
+      <button className="event-open" onClick={open}>
+        <div className="card-image">
+          <img src={e.image_url || img} alt="" loading="lazy" />
+          <span className="card-category">{e.category || "Evento"}</span>
+          {e.description?.startsWith("[Evento de ejemplo]") && (
+            <span className="example-label">Ejemplo</span>
+          )}
+          {Number(e.ticket_inventory) === 0 && e.ticket_inventory !== null && (
+            <span className="sold-out">Agotado</span>
+          )}
+          <span className="card-arrow">
+            <ArrowUpRight size={20} />
           </span>
         </div>
-        <div className="card-info">
-          <h3>{e.title}</h3>
-          <p>
-            <MapPin size={13} />
-            {e.venue_name || e.city || "Lugar por confirmar"}
-          </p>
-          <small>
-            {d.toLocaleTimeString("es-MX", {
-              hour: "2-digit",
-              minute: "2-digit",
-              timeZone: e.time_zone || "America/Mexico_City",
-            })}{" "}
-            · {e.city}
-          </small>
+        <div className="card-body">
+          <div className="date-block">
+            <b>
+              {d.toLocaleDateString("es-MX", {
+                day: "2-digit",
+                timeZone: e.time_zone || "America/Mexico_City",
+              })}
+            </b>
+            <span>
+              {d
+                .toLocaleDateString("es-MX", {
+                  month: "short",
+                  timeZone: e.time_zone || "America/Mexico_City",
+                })
+                .replace(".", "")}
+            </span>
+          </div>
+          <div className="card-info">
+            <h3>{e.title}</h3>
+            <p>
+              <MapPin size={13} />
+              {e.venue_name || e.city || "Lugar por confirmar"}
+            </p>
+            <small>
+              {d.toLocaleTimeString("es-MX", {
+                hour: "2-digit",
+                minute: "2-digit",
+                timeZone: e.time_zone || "America/Mexico_City",
+              })}{" "}
+              · {e.city}
+            </small>
+          </div>
         </div>
-      </div>
-      <div className="card-footer">
-        <span>
-          {e.organizer_name || "Ticket Pari"}
-          {e.organizer_verified && <Verified />}
-        </span>
-        <b>
-          {Number(e.ticket_price) ? money(e.ticket_price) : "Gratis"}
-          <small> MXN</small>
-        </b>
-      </div>
-    </button>
+        <div className="card-footer">
+          <span>
+            {e.organizer_name || "Ticket Pari"}
+            {e.organizer_verified && <Verified />}
+          </span>
+          <b>
+            {Number(e.ticket_price) ? money(e.ticket_price) : "Gratis"}
+            <small> MXN</small>
+          </b>
+        </div>
+      </button>
+      {onSave && (
+        <button
+          className={"save-event " + (saved ? "is-saved" : "")}
+          aria-label={
+            saved ? `Quitar ${e.title} de guardados` : `Guardar ${e.title}`
+          }
+          aria-pressed={saved}
+          onClick={onSave}
+        >
+          <Heart size={19} fill={saved ? "currentColor" : "none"} />
+        </button>
+      )}
+    </article>
+  );
+}
+function SavedEvents({ events, loading, saved, toggleSaved, open, explore }) {
+  const items = events.filter((e) => saved.includes(e.id));
+  return (
+    <section className="content-section saved-page">
+      <span className="eyebrow">LOS PLANES QUE TE GUSTAN</span>
+      <h1>Guardados</h1>
+      <p className="muted">
+        Marca el corazón de un evento para volver a encontrarlo aquí. Los
+        guardados se conservan en este dispositivo.
+      </p>
+      {loading ? (
+        <Empty title="Buscando tus eventos…" />
+      ) : items.length ? (
+        <div className="event-grid">
+          {items.map((e) => (
+            <EventCard
+              key={e.id}
+              event={e}
+              open={() => open(e)}
+              saved
+              onSave={() => toggleSaved(e.id)}
+            />
+          ))}
+        </div>
+      ) : (
+        <Empty title="Guarda ese plan que no te quieres perder">
+          <p>Explora los eventos y toca el corazón de tus favoritos.</p>
+          <button className="primary" onClick={explore}>
+            Explorar eventos
+            <ArrowUpRight size={17} />
+          </button>
+        </Empty>
+      )}
+    </section>
   );
 }
 function Auth({ db }) {
@@ -656,15 +751,15 @@ function Auth({ db }) {
           con un <em>boleto.</em>
         </h1>
         <Ticket size={90} />
-        <p>Compra, organiza y vive la ciudad.</p>
+        <p>Descubre, compra y vive tu próximo plan.</p>
       </div>
       <form className="auth-form" onSubmit={submit}>
         <span className="eyebrow">TU CUENTA TICKET PARI</span>
         <h2>{signup ? "Hagamos planes." : "Qué bueno verte."}</h2>
         <p>
           {signup
-            ? "Una cuenta para vivir y crear eventos."
-            : "Entra para ver tus boletos y organizar eventos."}
+            ? "Una cuenta para descubrir eventos y guardar tus boletos."
+            : "Entra para ver tus boletos y tus eventos guardados."}
         </p>
         {signup && (
           <>
@@ -718,7 +813,7 @@ function Field({ label, ...props }) {
     </label>
   );
 }
-function Profile({ db, session, profile, reload, manage }) {
+function Profile({ db, session, profile, reload, manage, organizerAllowed }) {
   const [editing, setEditing] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -820,29 +915,33 @@ function Profile({ db, session, profile, reload, manage }) {
           <button className="secondary" onClick={() => setEditing(true)}>
             Editar perfil
           </button>
-          <button className="primary" onClick={manage}>
-            Administrar mis eventos
-            <ArrowUpRight size={16} />
-          </button>
-          {!profile?.is_verified && !profile?.verification_requested && (
-            <button
-              className="secondary"
-              disabled={busy}
-              onClick={async () => {
-                setBusy(true);
-                const { error } = await db
-                  .from("pari_profiles")
-                  .update({ verification_requested: true })
-                  .eq("id", session.user.id);
-                if (error) setError(error.message);
-                else reload();
-                setBusy(false);
-              }}
-            >
-              <BadgeCheck size={17} />
-              Solicitar verificación de organizador
+          {organizerAllowed && (
+            <button className="primary" onClick={manage}>
+              Administrar mis eventos
+              <ArrowUpRight size={16} />
             </button>
           )}
+          {organizerAllowed &&
+            !profile?.is_verified &&
+            !profile?.verification_requested && (
+              <button
+                className="secondary"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  const { error } = await db
+                    .from("pari_profiles")
+                    .update({ verification_requested: true })
+                    .eq("id", session.user.id);
+                  if (error) setError(error.message);
+                  else reload();
+                  setBusy(false);
+                }}
+              >
+                <BadgeCheck size={17} />
+                Solicitar verificación de organizador
+              </button>
+            )}
           <button className="text-button" onClick={() => db.auth.signOut()}>
             <LogOut size={17} />
             Cerrar sesión
@@ -852,34 +951,19 @@ function Profile({ db, session, profile, reload, manage }) {
     </section>
   );
 }
-function EventPage({ event: e, db, session, back, auth, tickets, reload }) {
+function EventPage({
+  event: e,
+  db,
+  session,
+  profile,
+  back,
+  auth,
+  tickets,
+  reload,
+}) {
   const [qty, setQty] = useState(1),
-    [card, setCard] = useState(""),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
-    [order, setOrder] = useState(null),
-    [requestId] = useState(() => crypto.randomUUID());
-  async function buy(ev) {
-    ev.preventDefault();
-    if (!session) return auth();
-    setBusy(true);
-    setError("");
-    try {
-      const { data, error } = await db.rpc("pari_buy_demo_tickets", {
-        p_event_id: e.id,
-        p_quantity: qty,
-        p_card: card.replace(/\s/g, ""),
-        p_request_id: requestId,
-      });
-      if (error) throw error;
-      setOrder(data);
-      reload();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setBusy(false);
-    }
-  }
+    [checkout, setCheckout] = useState(false),
+    [order, setOrder] = useState(null);
   if (order)
     return (
       <section className="narrow success">
@@ -898,6 +982,29 @@ function EventPage({ event: e, db, session, back, auth, tickets, reload }) {
           <ArrowUpRight size={18} />
         </button>
       </section>
+    );
+  if (checkout)
+    return (
+      <Checkout
+        event={e}
+        initialQuantity={qty}
+        session={session}
+        profile={profile}
+        db={db}
+        onBack={(quantity) => {
+          setQty(quantity);
+          setCheckout(false);
+          window.scrollTo(0, 0);
+        }}
+        onSuccess={(data) => {
+          setOrder(data);
+          setQty(data.quantity);
+          setCheckout(false);
+          reload();
+          window.scrollTo(0, 0);
+        }}
+        renderAuth={() => <Auth db={db} />}
+      />
     );
   const soldOut =
     e.ticket_inventory !== null && Number(e.ticket_inventory) === 0;
@@ -943,7 +1050,7 @@ function EventPage({ event: e, db, session, back, auth, tickets, reload }) {
               "Prepárate para vivir una experiencia en la ciudad."}
           </p>
         </div>
-        <form className="checkout panel" onSubmit={buy}>
+        <div className="checkout panel event-ticket-panel">
           <span className="eyebrow">TU ACCESO AL PLAN</span>
           <h2>Acceso general</h2>
           <strong>
@@ -956,7 +1063,7 @@ function EventPage({ event: e, db, session, back, auth, tickets, reload }) {
               <button
                 type="button"
                 aria-label="Quitar boleto"
-                disabled={qty <= 1 || busy}
+                disabled={qty <= 1}
                 onClick={() => setQty((q) => q - 1)}
               >
                 <Minus size={16} />
@@ -965,7 +1072,7 @@ function EventPage({ event: e, db, session, back, auth, tickets, reload }) {
               <button
                 type="button"
                 aria-label="Agregar boleto"
-                disabled={qty >= Math.min(10, e.ticket_inventory ?? 10) || busy}
+                disabled={qty >= Math.min(10, e.ticket_inventory ?? 10)}
                 onClick={() => setQty((q) => q + 1)}
               >
                 <Plus size={16} />
@@ -983,40 +1090,21 @@ function EventPage({ event: e, db, session, back, auth, tickets, reload }) {
             <span>Total</span>
             <b>{money(Number(e.ticket_price) * qty)} MXN</b>
           </div>
-          <div className="demo-note">
-            <b>Modo de prueba · sin cargos reales</b>
-            <span>
-              Usa la tarjeta 1234 1234 1234 1234 para simular tu compra.
-            </span>
-          </div>
-          {session && (
-            <Field
-              label="Tarjeta de prueba"
-              name="card"
-              inputMode="numeric"
-              autoComplete="off"
-              placeholder="1234 1234 1234 1234"
-              maxLength={19}
-              value={card}
-              onChange={(ev) => setCard(ev.target.value.replace(/[^\d ]/g, ""))}
-              required
-            />
-          )}
-          {error && <Notice>{error}</Notice>}
-          <button className="primary" disabled={busy || soldOut || !db}>
-            {busy
-              ? "Confirmando…"
-              : soldOut
-                ? "Agotado"
-                : session
-                  ? "Confirmar compra de prueba"
-                  : "Inicia sesión para comprar"}
-            <Ticket size={18} />
+          <button
+            className="primary"
+            disabled={soldOut || !db}
+            onClick={() => {
+              setCheckout(true);
+              window.scrollTo(0, 0);
+            }}
+          >
+            {soldOut ? "Agotado" : "Comprar boletos"}
+            <ArrowUpRight size={18} />
           </button>
           <small className="secure-note">
             Boletos digitales en tu perfil · Sin cargos adicionales
           </small>
-        </form>
+        </div>
       </div>
     </section>
   );
@@ -1036,6 +1124,11 @@ function TicketReceipt({ order: o }) {
       <p>
         {o.quantity} acceso{o.quantity > 1 ? "s" : ""} · {money(o.total)} MXN
       </p>
+      {o.attendee_name && (
+        <p>
+          <b>Asistente:</b> {o.attendee_name}
+        </p>
+      )}
       <div className="ticket-code">
         <span>CÓDIGO DE ACCESO</span>
         <code>{o.qr_token}</code>
@@ -1318,7 +1411,7 @@ function Organizer({ db, session, profile, create, reload, refresh, mode }) {
     [eventFilter, setEventFilter] = useState("all"),
     [code, setCode] = useState(""),
     [message, setMessage] = useState("");
-  const admin = mode === "admin" && profile?.role === "admin";
+  const admin = profile?.role === "admin";
   useEffect(() => {
     let active = true;
     if (mode === "admin" && !profile) return;
@@ -1390,6 +1483,17 @@ function Organizer({ db, session, profile, create, reload, refresh, mode }) {
     else reload();
     setBusy(false);
   }
+  async function authorizeOrganizer(user) {
+    setBusy(true);
+    setError("");
+    const { error } = await db.rpc("pari_set_organizer", {
+      p_user_id: user.id,
+      p_enabled: user.role !== "business",
+    });
+    if (error) setError(error.message);
+    else reload();
+    setBusy(false);
+  }
   async function checkin(ev) {
     ev.preventDefault();
     setBusy(true);
@@ -1418,8 +1522,7 @@ function Organizer({ db, session, profile, create, reload, refresh, mode }) {
     return (
       <Empty title="Acceso exclusivo para administradores">
         <p>
-          Tu cuenta puede crear y administrar sus propios eventos desde
-          Organizadores.
+          Este panel está reservado a las cuentas autorizadas por Ticket Pari.
         </p>
       </Empty>
     );
@@ -1490,7 +1593,7 @@ function Organizer({ db, session, profile, create, reload, refresh, mode }) {
           ["events", "Mis eventos"],
           ["orders", "Ventas y asistentes"],
           ["checkin", "Control de acceso"],
-          ...(admin ? [["users", "Organizadores y verificación"]] : []),
+          ...(admin ? [["users", "Accesos y verificación"]] : []),
         ].map(([id, t]) => (
           <button
             key={id}
@@ -1576,6 +1679,7 @@ function Organizer({ db, session, profile, create, reload, refresh, mode }) {
                 <tr>
                   <th>Orden</th>
                   <th>Evento</th>
+                  <th>Asistente</th>
                   <th>Boletos</th>
                   <th>Total</th>
                   <th>Estado</th>
@@ -1590,6 +1694,10 @@ function Organizer({ db, session, profile, create, reload, refresh, mode }) {
                       <small>{date(o.created_at)}</small>
                     </td>
                     <td>{events.find((e) => e.id === o.event_id)?.title}</td>
+                    <td>
+                      {o.attendee_name || "Sin datos de asistente"}
+                      <small>{o.attendee_email}</small>
+                    </td>
                     <td>{o.quantity}</td>
                     <td>{money(o.total)}</td>
                     <td>
@@ -1632,16 +1740,17 @@ function Organizer({ db, session, profile, create, reload, refresh, mode }) {
         </form>
       ) : tab === "users" ? (
         <section className="panel">
-          <h2>Organizadores y verificación</h2>
+          <h2>Accesos y verificación</h2>
           <p className="muted">
-            La palomita indica que un administrador verificó la identidad del
-            organizador.
+            Autoriza solo a los organizadores que podrán crear y administrar
+            eventos. La palomita de identidad se gestiona por separado.
           </p>
           <div className="table-scroll">
             <table>
               <thead>
                 <tr>
                   <th>Usuario</th>
+                  <th>Acceso para organizar</th>
                   <th>Solicitud</th>
                   <th>Verificación</th>
                   <th>Acción</th>
@@ -1654,6 +1763,24 @@ function Organizer({ db, session, profile, create, reload, refresh, mode }) {
                       {u.full_name || "Sin nombre"}
                       {u.is_verified && <Verified />}
                       <small>{u.email}</small>
+                    </td>
+                    <td>
+                      {u.role === "admin"
+                        ? "Administrador"
+                        : u.role === "business"
+                          ? "Autorizado"
+                          : "Solo asistente"}
+                      {u.role !== "admin" && (
+                        <button
+                          className="secondary"
+                          disabled={busy}
+                          onClick={() => authorizeOrganizer(u)}
+                        >
+                          {u.role === "business"
+                            ? "Retirar acceso"
+                            : "Autorizar organizador"}
+                        </button>
+                      )}
                     </td>
                     <td>
                       {u.verification_requested
