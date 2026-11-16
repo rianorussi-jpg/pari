@@ -1,87 +1,50 @@
-# Pari
+# Ticket Pari
 
-Monorepo separado desde el inicio:
+Plataforma de eventos y boletos sobre las tablas existentes `pari_`. Monorepo Vite + React con tres aplicaciones:
 
-- `apps/client` — app de usuarios; preparada para Capacitor después.
-- `apps/business` — panel de antros con Supabase Auth.
-- `apps/admin` — panel administrativo.
-- `supabase/setup.sql` — esquema inicial, RLS, seeds y asignación de negocios.
+- `apps/client`: catálogo, filtros por ciudad/categoría/fecha, cuentas, perfiles y boletos.
+- `apps/business`: creación y administración de eventos, ventas y control de acceso.
+- `apps/admin`: administración de eventos y verificación de organizadores (requiere `pari_profiles.role = 'admin'`).
 
-## Supabase
+La interfaz y lógica compartidas viven en `apps/shared`.
 
-Este proyecto está preparado para compartir una base con otros sistemas: **todas las tablas, funciones, trigger y policies propias de Pari usan el prefijo `pari_`**. No crea tablas genéricas como `venues`, `events` o `profiles`. El esquema `auth` sigue siendo el nativo de Supabase.
+## Desarrollo
 
+Node 24 y npm. Ejecutar desde la raíz:
 
-1. Crea un proyecto en Supabase.
-2. Abre SQL Editor y ejecuta completo `supabase/setup.sql`.
-3. En Authentication > Users crea estas cuentas con **Auto Confirm User**:
-   - `annua@pari.mx`
-   - `faunna@pari.mx`
-   - `janis@pari.mx`
-4. Usa las contraseñas que tú elijas. No se guardan contraseñas en SQL.
-
-El SQL preasigna esos correos a Annua, Faunna Rooftop y Janis. Si los usuarios ya existían, el bloque final también los sincroniza.
-
-## Variables en Vercel
-
-Agrega las mismas dos variables en los tres proyectos Vercel:
-
-```env
-VITE_SUPABASE_URL=https://TU-PROYECTO.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxxxxxxxx
+```sh
+npm ci
+npm run dev:client
+npm run dev:business
+npm run dev:admin
+npm test
+npm run build
 ```
 
-Root directories recomendados:
+Configurar en cada aplicación las variables del archivo `.env.example`. Solo se usa la URL del proyecto y la clave pública/publishable de Supabase; nunca `service_role`.
 
-- Cliente: `apps/client`
-- Negocios: `apps/business`
-- Admin: `apps/admin`
+## Base existente
 
-Framework: Vite. Build: `npm run build`. Output: `dist`.
+La migración `supabase/migrations/20261116223846_ticket_pari.sql` (también disponible como `supabase/patch-ticket-pari.sql`) se aplica sobre la base que ya tiene `setup.sql`, `patch-client-real.sql` y `patch-operacion-completa.sql`. No volver a ejecutar el setup en una base existente. La migración conserva eventos, perfiles, órdenes y datos de antros anteriores.
 
-## Qué ya está conectado
+Agrega propietario de evento, ciudad, categoría, zona horaria, verificación y campos de compras de prueba. Las cuentas con membresías anteriores pueden seguir administrando los eventos de sus lugares; cualquier cuenta puede crear eventos nuevos sin tener un antro.
 
-### Cliente
-- Lee `pari_venues` reales de Supabase.
-- Lee `pari_events` publicados reales de Supabase.
-- Si faltan las ENV o hay un error, conserva los datos demo para que la interfaz no se rompa.
+Cada evento usa una zona horaria explícita. Los horarios se capturan en la hora local del evento y se guardan en UTC. El catálogo permite cualquier ciudad; el filtro muestra las ciudades con eventos futuros publicados.
 
-### Negocios
-- Login real con Supabase Auth.
-- Detecta el antro asignado usando `pari_venue_members`.
-- Lee reservaciones y eventos del antro autenticado.
-- Annua/Faunna/Janis quedan aislados por RLS.
+## Pagos de prueba
 
-### Admin
-- Lee negocios y eventos visibles desde Supabase para comprobar la conexión.
+La única tarjeta aceptada es **1234123412341234**. No se procesan cobros ni se guardan números de tarjeta. La base valida precio, cantidad, publicación y disponibilidad; genera la orden `paid` con `is_demo = true` y descuenta inventario en una transacción con bloqueo de fila. Un identificador por solicitud evita duplicados al reintentar.
 
-## Siguiente etapa
+Las órdenes anteriores mantienen sus estados y no se convierten en pagadas. Las cifras del panel incluyen órdenes confirmadas; los pagos nuevos son simulados.
 
-Falta conectar Auth del cliente, creación real de reservas, compra de boletos, muro, uploads de imágenes y acciones de edición desde el panel de negocios.
+Los boletos muestran un código de acceso por orden/grupo. El organizador introduce ese código en Control de acceso; el ingreso solo se registra una vez. La emisión de QR y escaneo por cámara no están incluidos en esta versión.
 
+La verificación se solicita desde Perfil y la aprueba/revoca un administrador. Un trigger impide a los usuarios cambiar su propio rol o verificación. Los datos privados del perfil no se publican en los eventos.
 
-## Cliente real (Auth / reservaciones / planes)
-Si ya habías corrido `supabase/setup.sql` antes de esta versión, corre también `supabase/patch-client-real.sql` para actualizar el trigger de nuevos usuarios y guardar nombre/celular desde Auth.
+## Vercel
 
-## Patch operativo (reservas, imágenes, muro y paneles)
-Si ya corriste `setup.sql` y `patch-client-real.sql`, ejecuta también:
+Proyectos existentes: `pari-client`, `pari-business` y `pari-admin`. Cada proyecto debe usar su directorio `apps/<app>` y permitir incluir archivos fuera de ese directorio (el módulo compartido está en `apps/shared`). Mantener las variables públicas de Supabase existentes. `npm run build` valida las tres aplicaciones desde la raíz.
 
-`supabase/patch-operacion-completa.sql`
+## Pruebas
 
-Este patch agrega `auto_accept_reservations`, crea el bucket público `pari-media`, habilita avatars/portadas/galerías y añade las policies de Business/Admin.
-
-### Activar el panel Admin
-El panel general ahora exige una cuenta con `role = 'admin'`.
-1. Crea el usuario en Supabase Authentication.
-2. Después corre, cambiando el correo:
-
-```sql
-update public.pari_profiles
-set role = 'admin'
-where email = 'tu-correo@dominio.com';
-```
-
-### Qué quedó conectado
-- Business: reservaciones, aceptar/rechazar, auto/manual, eventos, check-in, portada, galería, promociones y datos del antro.
-- Cliente: reserva automática/manual real, perfil con vista + edición separada, avatar, muro con likes/comentarios y fotos de perfil.
-- Admin: login por rol admin, negocios, usuarios, eventos, reservaciones/boletos, muro y moderación.
+`npm test` ejecuta las migraciones contra PostgreSQL embebido (PGlite) y verifica RLS, propietario, acceso anónimo, protección de roles, verificación administrativa, compra simulada, inventario, idempotencia, privacidad de órdenes y rechazo de doble ingreso. También valida conversiones de zona horaria y horarios inexistentes por cambio de horario.
