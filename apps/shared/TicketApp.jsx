@@ -127,7 +127,7 @@ export default function TicketApp({ db, mode = "client" }) {
   return (
     <div className="site">
       <div className="announcement">
-        Tu próximo gran plan está en la ciudad <span>✦</span> Todas las ciudades
+        Tu próximo gran plan está aquí, en Ticket Pari <span>✦</span>
       </div>
       <header className="site-header">
         <button className="brand" onClick={() => go("discover")}>
@@ -188,7 +188,10 @@ export default function TicketApp({ db, mode = "client" }) {
             event={selected}
             db={db}
             session={session}
-            back={() => setSelected(null)}
+            back={() => {
+              setSelected(null);
+              window.scrollTo(0, 0);
+            }}
             auth={auth}
             tickets={() => go("tickets")}
             reload={reload}
@@ -197,7 +200,10 @@ export default function TicketApp({ db, mode = "client" }) {
           <Discover
             events={events}
             loading={loading}
-            open={setSelected}
+            open={(event) => {
+              setSelected(event);
+              window.scrollTo(0, 0);
+            }}
             create={() => go("create")}
           />
         ) : view === "profile" ? (
@@ -336,7 +342,7 @@ function Discover({ events, loading, open, create }) {
         />
         <div className="hero-content">
           <span className="hero-label">
-            <span /> TODAS LAS CIUDADES. TODOS LOS PLANES.
+            <span /> BUENOS PLANES. GRANDES HISTORIAS.
           </span>
           <h1>
             Sal de la rutina.
@@ -344,9 +350,8 @@ function Discover({ events, loading, open, create }) {
             Entra al <em>plan.</em>
           </h1>
           <p>
-            Fiestas, conciertos, stand up y eso que todavía
-            <br className="desktop" /> no sabes que te va a encantar.
-            Encuéntralo en Ticket Pari.
+            Fiestas, conciertos, stand up y experiencias que se convierten en
+            grandes historias.
           </p>
           <button
             className="light-button"
@@ -359,8 +364,7 @@ function Discover({ events, loading, open, create }) {
             Encuentra tu próximo evento <ArrowUpRight size={19} />
           </button>
           <div className="hero-location">
-            <MapPin size={16} /> Tu ciudad, tu próximo plan <span>·</span> Miles
-            de historias por vivir
+            <MapPin size={16} /> Ticket Pari, tu próximo plan
           </div>
         </div>
         <div className="hero-sticker">
@@ -378,7 +382,7 @@ function Discover({ events, loading, open, create }) {
       <section className="catalog" id="events">
         <div className="catalog-top">
           <div>
-            <span className="eyebrow">DESCUBRE TU CIUDAD</span>
+            <span className="eyebrow">ENCUENTRA TU PRÓXIMO PLAN</span>
             <h2>
               Un boleto. Un gran plan<span>.</span>
             </h2>
@@ -391,7 +395,7 @@ function Discover({ events, loading, open, create }) {
           <Search size={22} />
           <input
             aria-label="Buscar eventos"
-            placeholder="¿Qué se te antoja? Busca evento, artista o lugar"
+            placeholder="Busca un evento, artista o lugar"
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
@@ -400,7 +404,7 @@ function Discover({ events, loading, open, create }) {
             value={city}
             onChange={(e) => setCity(e.target.value)}
           >
-            <option value="all">Todas las ciudades</option>
+            <option value="all">Ciudad</option>
             {[...new Set(events.map((e) => e.city).filter(Boolean))]
               .sort()
               .map((c) => (
@@ -446,7 +450,9 @@ function Discover({ events, loading, open, create }) {
                 ? "Eventos que vienen"
                 : `Próximamente en ${city}`
               : category}{" "}
-            <span>{filtered.length} eventos</span>
+            <span>
+              {filtered.length} {filtered.length === 1 ? "evento" : "eventos"}
+            </span>
           </h3>
           <label className="sort">
             <SlidersHorizontal size={15} />
@@ -546,6 +552,9 @@ function EventCard({ event: e, open, index = 0 }) {
       <div className="card-image">
         <img src={e.image_url || img} alt="" loading="lazy" />
         <span className="card-category">{e.category || "Evento"}</span>
+        {e.description?.startsWith("[Evento de ejemplo]") && (
+          <span className="example-label">Ejemplo</span>
+        )}
         {Number(e.ticket_inventory) === 0 && e.ticket_inventory !== null && (
           <span className="sold-out">Agotado</span>
         )}

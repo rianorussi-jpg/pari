@@ -1353,11 +1353,19 @@ td small {
     font-size: 32px;
   }
   .announcement {
-    font-size: 9px;
-    padding: 9px 4px;
+    font-size: 10px;
+    padding: 10px 16px;
+    letter-spacing: 0.025em;
+    line-height: 1.4;
   }
   .site-header {
-    height: 72px;
+    height: 68px;
+    padding: 0 18px;
+    position: sticky;
+    top: 0;
+    z-index: 15;
+    background: #fffffff5;
+    backdrop-filter: blur(16px);
   }
   .site-header nav {
     display: none;
@@ -1375,15 +1383,17 @@ td small {
     display: none;
   }
   .publish {
-    font-size: 10px;
-    padding: 9px;
+    font-size: 12px;
+    padding: 10px 12px;
+    min-height: 44px;
+    border-radius: 10px;
   }
   .hero {
-    margin-top: 14px;
-    width: 94%;
-    min-height: 475px;
-    padding: 37px 24px 60px;
-    border-radius: 12px;
+    margin-top: 12px;
+    width: calc(100% - 24px);
+    min-height: 420px;
+    padding: 32px 24px 65px;
+    border-radius: 20px;
   }
   .hero-image {
     background-position: 60% center;
@@ -1393,24 +1403,29 @@ td small {
     background: linear-gradient(90deg, #141414e8, #14141488);
   }
   .hero h1 {
-    font-size: 49px;
-    margin-top: 25px;
+    font-size: clamp(42px, 11.8vw, 58px);
+    margin: 23px 0 17px;
+    line-height: 1.04;
+    letter-spacing: -0.06em;
   }
   .hero p {
-    font-size: 12px;
-    max-width: 295px;
+    font-size: 14px;
+    line-height: 1.6;
+    max-width: 300px;
+    margin-bottom: 22px;
   }
   .hero-label {
-    font-size: 8px;
-    letter-spacing: 0.12em;
+    font-size: 9px;
+    letter-spacing: 0.11em;
   }
   .hero-sticker {
-    width: 78px;
-    height: 78px;
-    right: 25px;
+    width: 65px;
+    height: 65px;
+    right: 20px;
     top: auto;
-    bottom: 42px;
-    font-size: 13px;
+    bottom: 27px;
+    font-size: 11px;
+    box-shadow: none;
   }
   .hero-sticker svg {
     width: 16px;
@@ -1418,27 +1433,28 @@ td small {
     margin-bottom: 3px;
   }
   .hero-location {
-    font-size: 9px;
-    max-width: 220px;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-top: 22px;
+    font-size: 11px;
+    max-width: calc(100% - 50px);
+    flex-wrap: nowrap;
+    gap: 6px;
+    margin-top: 23px;
+    line-height: 1.4;
   }
   .hero-bottom {
-    left: 24px;
-    right: auto;
-    bottom: 17px;
-    font-size: 7px;
+    display: none;
   }
   .hero-location span {
     display: none;
   }
   .light-button {
-    font-size: 11px;
-    padding: 13px 15px;
+    font-size: 13px;
+    min-height: 48px;
+    padding: 14px 17px;
+    border-radius: 11px;
   }
   .catalog {
-    padding: 36px 5% 40px;
+    padding: 34px 20px 42px;
+    scroll-margin-top: 85px;
   }
   .catalog-top {
     align-items: start;
@@ -1446,147 +1462,176 @@ td small {
   .catalog h2 {
     font-size: 26px;
     line-height: 1.2;
-    margin-bottom: 21px;
+    margin-bottom: 22px;
+    max-width: none;
   }
   .catalog-top .city {
     display: none;
   }
   .eyebrow {
-    font-size: 8px;
-    margin-bottom: 11px;
+    font-size: 9px;
+    margin-bottom: 12px;
+    line-height: 1.5;
   }
   .search-bar {
-    padding: 10px;
-    gap: 8px;
+    padding: 12px;
+    gap: 10px;
     display: grid;
-    grid-template-columns: 20px 1fr 1fr;
-    box-shadow: none;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    box-shadow: 0 5px 20px #20202006;
+    position: relative;
+    border-radius: 16px;
   }
   .search-bar input {
-    grid-column: 2/4;
+    grid-column: 1 / -1;
     width: 100%;
-    font-size: 13px;
+    font-size: 16px;
     min-width: 0;
+    min-height: 48px;
+    padding: 12px 10px 12px 35px;
+    border-bottom: 1px solid var(--line);
   }
   .search-bar > svg {
-    width: 18px;
+    position: absolute;
+    top: 27px;
+    left: 24px;
+    width: 19px;
+    height: 19px;
+    pointer-events: none;
   }
   .search-bar select {
-    font-size: 11px;
-    padding: 9px 4px;
+    font-size: 16px;
+    min-height: 46px;
+    padding: 10px 5px;
     border: 0;
     max-width: 100%;
     width: 100%;
+    background: #f8f7f4;
+    border-radius: 8px;
   }
   .search-bar select:first-of-type {
-    grid-column: 1/3;
+    grid-column: 1;
   }
   .search-bar .primary {
-    grid-column: 3;
-    grid-row: 3;
-    min-height: 36px;
-    padding: 8px 13px;
-    font-size: 11px;
+    grid-column: 1 / -1;
+    grid-row: auto;
+    min-height: 46px;
+    padding: 12px 16px;
+    font-size: 14px;
+    border-radius: 9px;
   }
   .categories {
-    margin: 20px 0 25px;
-    gap: 7px;
+    margin: 20px -20px 28px;
+    padding: 2px 20px 7px;
+    gap: 9px;
+    scrollbar-width: none;
   }
   .categories button {
-    padding: 9px 13px;
-    font-size: 11px;
+    min-height: 44px;
+    padding: 11px 16px;
+    font-size: 12px;
+    flex-shrink: 0;
   }
   .categories svg {
     width: 15px;
   }
   .results-heading h3 {
-    font-size: 17px;
+    font-size: 21px;
   }
   .results-heading h3 span {
     display: block;
-    margin: 6px 0 0;
-    font-size: 10px;
+    margin: 7px 0 0;
+    font-size: 12px;
   }
   .sort select {
-    font-size: 10px;
+    font-size: 16px;
+    max-width: 140px;
+    min-height: 44px;
   }
   .event-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
   }
   .card-image {
-    aspect-ratio: 1.3;
+    aspect-ratio: 1.8;
   }
   .card-category {
-    font-size: 8px;
-    top: 9px;
-    left: 9px;
-    padding: 4px 7px;
+    font-size: 11px;
+    top: 14px;
+    left: 14px;
+    padding: 7px 12px;
   }
   .card-arrow {
-    width: 25px;
-    height: 25px;
-    right: 8px;
-    bottom: 8px;
+    width: 38px;
+    height: 38px;
+    right: 14px;
+    bottom: 14px;
   }
   .card-arrow svg {
-    width: 15px;
+    width: 20px;
   }
   .card-body {
-    gap: 9px;
-    padding: 13px 10px;
+    gap: 17px;
+    padding: 19px 18px 16px;
   }
   .date-block {
-    padding-right: 8px;
-    min-width: 30px;
+    padding-right: 17px;
+    min-width: 48px;
   }
   .date-block b {
-    font-size: 19px;
+    font-size: 28px;
   }
   .date-block span {
-    font-size: 8px;
+    font-size: 11px;
   }
   .card-info h3 {
-    font-size: 12px;
-    letter-spacing: -0.02em;
-    line-height: 1.4;
+    font-size: 19px;
+    letter-spacing: -0.035em;
+    line-height: 1.35;
+    margin-bottom: 9px;
   }
   .card-info p {
-    font-size: 9px;
+    font-size: 13px;
+    gap: 4px;
+    margin-bottom: 6px;
   }
   .card-info p svg {
-    display: none;
+    display: block;
+    width: 13px;
+    flex-shrink: 0;
   }
   .card-info small {
-    font-size: 8px;
+    font-size: 11px;
   }
   .card-footer {
-    margin: 0 10px;
-    padding: 11px 0;
-    flex-wrap: wrap;
-    gap: 6px;
+    margin: 0 18px;
+    padding: 16px 0;
+    flex-wrap: nowrap;
+    gap: 12px;
   }
   .card-footer > span {
-    font-size: 8px;
-    max-width: 100%;
+    font-size: 11px;
+    min-width: 0;
+    max-width: 65%;
   }
   .card-footer svg {
-    width: 13px;
-    height: 13px;
+    width: 16px;
+    height: 16px;
   }
   .card-footer > b {
-    font-size: 12px;
+    font-size: 18px;
   }
   .card-footer small {
-    font-size: 7px;
+    font-size: 10px;
   }
   .organizer-banner {
-    padding: 29px 24px;
+    padding: 30px 24px;
     margin-bottom: 35px;
-    width: 90%;
+    width: calc(100% - 40px);
     position: relative;
-    min-height: 340px;
+    min-height: 320px;
     align-items: start;
+    border-radius: 18px;
   }
   .organizer-banner > div:first-child {
     position: relative;
@@ -1653,22 +1698,25 @@ td small {
     left: 0;
     right: 0;
     background: #fffffff5;
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(18px);
     border-top: 1px solid var(--line);
     z-index: 20;
-    padding: 10px 8px max(12px, env(safe-area-inset-bottom));
+    padding: 8px 12px max(10px, env(safe-area-inset-bottom));
     justify-content: space-around;
   }
   .mobile-nav button {
     display: flex;
     flex-direction: column;
     gap: 5px;
-    font-size: 9px;
+    font-size: 10px;
     color: #777;
-    min-width: 50px;
+    min-width: 60px;
+    min-height: 48px;
+    border-radius: 12px;
   }
   .mobile-nav .active {
     color: var(--orange);
+    background: #fff1ec;
   }
   .narrow {
     margin: 30px auto 45px;
@@ -1678,7 +1726,8 @@ td small {
     padding: 30px 5% 45px;
   }
   .detail {
-    margin-top: 15px;
+    margin-top: 16px;
+    padding: 0 20px;
   }
   .detail-cover {
     aspect-ratio: 1.6;
@@ -1703,6 +1752,8 @@ td small {
   }
   .checkout {
     position: static;
+    padding: 22px;
+    border-radius: 16px;
   }
   .event-facts b {
     font-size: 13px;
@@ -1840,10 +1891,100 @@ td small {
   .empty p {
     font-size: 12px;
   }
+  .account {
+    min-height: 44px;
+    min-width: 40px;
+  }
+  .event-card {
+    border-radius: 18px;
+    box-shadow: 0 6px 22px #20202006;
+  }
+  .field input,
+  .field select,
+  .field textarea {
+    font-size: 16px;
+    min-height: 48px;
+  }
+  .quantity button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .primary,
+  .secondary {
+    min-height: 46px;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   * {
     scroll-behavior: auto !important;
     transition: none !important;
+  }
+}
+
+.example-label {
+  position: absolute;
+  right: 13px;
+  top: 13px;
+  background: #202021d9;
+  color: white;
+  border-radius: 30px;
+  padding: 6px 10px;
+  font-size: 10px;
+}
+@media (min-width: 1200px) {
+  .event-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (min-width: 601px) and (max-width: 760px) {
+  .event-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .card-info h3 {
+    font-size: 16px;
+  }
+  .card-footer {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 375px) {
+  .site-header {
+    padding: 0 14px;
+    gap: 8px;
+  }
+  .site-header .brand {
+    font-size: 22px;
+  }
+  .header-actions {
+    gap: 4px;
+  }
+  .publish {
+    font-size: 11px;
+    padding: 9px;
+  }
+  .hero {
+    padding: 28px 21px 65px;
+  }
+  .hero h1 {
+    font-size: 42px;
+  }
+  .catalog {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .sort select {
+    max-width: 126px;
+  }
+  .card-info h3 {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 375px) {
+  .categories {
+    margin-left: -16px;
+    margin-right: -16px;
+    padding-left: 16px;
+    padding-right: 16px;
   }
 }
