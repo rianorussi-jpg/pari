@@ -30,6 +30,12 @@ for (const [id, email] of [
 await db.query("update public.pari_profiles set role='admin' where id=$1", [
   admin,
 ]);
+await db.query("update public.pari_profiles set role='business' where id=$1", [
+  organizer,
+]);
+await db.exec(
+  fs.readFileSync("supabase/patch-checkout-organizers.sql", "utf8"),
+);
 await db.exec(
   "grant select,update on public.pari_profiles to authenticated;grant select on public.pari_venue_members to authenticated;",
 );
@@ -160,6 +166,104 @@ await denied(
   organizer,
   "update public.pari_events set organizer_id=$1 where id=$2",
   [other, eid],
+);
+await denied(
+  buyer,
+  `insert into public.pari_events(title,organizer_id,city,starts_at,status) values('Unauthorized event',$1,'Puebla',now()+interval '10 days','draft')`,
+  [buyer],
+);
+await denied(buyer, "select public.pari_set_organizer($1,true)", [buyer]);
+await denied(
+  buyer,
+  "update public.pari_profiles set role='business' where id=$1",
+  [buyer],
+);
+await as(
+  organizer,
+  "update public.pari_events set status='published',ticket_inventory=5 where id=$1",
+  [eid],
+);
+const checkoutReq = "ffffffff-ffff-4fff-8fff-ffffffffffff";
+const checkoutSql =
+  "select public.pari_checkout_demo($1,1,'1234123412341234',$2,$3,$4,$5) as result";
+await denied(buyer, checkoutSql, [eid, checkoutReq, "A", "bad-email", ""]);
+await denied(buyer, checkoutSql, [
+  eid,
+  checkoutReq,
+  "Asistente de prueba",
+  "test@example.invalid",
+  "invalid phone",
+]);
+const details = [
+  eid,
+  checkoutReq,
+  "Asistente de prueba",
+  "TEST@example.invalid",
+  "+52 5512345678",
+];
+const checkoutOrder = (await as(buyer, checkoutSql, details)).rows[0].result;
+assert.equal(checkoutOrder.attendee_name, "Asistente de prueba");
+assert.equal(checkoutOrder.attendee_email, "test@example.invalid");
+assert.equal(checkoutOrder.attendee_phone, "+52 5512345678");
+assert.equal(
+  (await as(buyer, checkoutSql, details)).rows[0].result.id,
+  checkoutOrder.id,
+);
+await denied(buyer, checkoutSql, [
+  eid,
+  checkoutReq,
+  "Otro asistente",
+  "test@example.invalid",
+  "",
+]);
+assert.equal(
+  (
+    await as(
+      null,
+      "select ticket_inventory from public.pari_events where id=$1",
+      [eid],
+    )
+  ).rows[0].ticket_inventory,
+  4,
+);
+assert.equal(
+  (
+    await as(other, "select * from public.pari_ticket_orders where id=$1", [
+      checkoutOrder.id,
+    ])
+  ).rows.length,
+  0,
+);
+await as(admin, "select public.pari_set_organizer($1,false)", [organizer]);
+assert.equal(
+  (await as(organizer, "select * from public.pari_ticket_orders")).rows.length,
+  0,
+);
+assert.equal(
+  (
+    await as(
+      organizer,
+      "update public.pari_events set title='Revoked' where id=$1 returning id",
+      [eid],
+    )
+  ).rows.length,
+  0,
+);
+await denied(organizer, "select public.pari_check_in($1)", [
+  checkoutOrder.qr_token,
+]);
+await as(admin, "select public.pari_set_organizer($1,true)", [organizer]);
+assert.equal(
+  (
+    await as(organizer, "select * from public.pari_ticket_orders where id=$1", [
+      checkoutOrder.id,
+    ])
+  ).rows.length,
+  1,
+);
+await denied(admin, "select public.pari_set_organizer($1,false)", [admin]);
+console.log(
+  "PASS: curated organizer permissions, admin grants/revocation, attendee validation, saved checkout data and retry consistency",
 );
 console.log(
   "PASS: migration, public catalog, ownership, role protection, verification, payment validation, stock, idempotency, order privacy, check-in and duplicate-entry rejection",
