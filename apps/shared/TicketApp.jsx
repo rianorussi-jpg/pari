@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import "./ticket.css";
 import Checkout from "./Checkout.jsx";
+import { loadOwnProfile } from "./profile.mjs";
 import { useSavedEvents, canOrganize } from "./saved.mjs";
 import {
   zones,
@@ -54,13 +55,18 @@ const img =
 export default function TicketApp({ db, mode = "client" }) {
   const [session, setSession] = useState(null),
     [ready, setReady] = useState(false),
-    [profile, setProfile] = useState(null),
+    [storedProfile, setProfile] = useState(null),
+    [profileUserId, setProfileUserId] = useState(null),
+    [profileError, setProfileError] = useState(""),
     [view, setView] = useState(mode === "client" ? "discover" : "manage"),
     [selected, setSelected] = useState(null),
     [events, setEvents] = useState([]),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
     [refresh, setRefresh] = useState(0);
+  const profile =
+    storedProfile?.id === session?.user?.id ? storedProfile : null;
+  const profileLoading = Boolean(session && profileUserId !== session.user.id);
   const [saved, toggleSaved] = useSavedEvents(session?.user?.id);
   const organizerAllowed = canOrganize(profile);
   const openEvent = (event) => {
@@ -86,18 +92,27 @@ export default function TicketApp({ db, mode = "client" }) {
   useEffect(() => {
     if (!session) {
       setProfile(null);
+      setProfileUserId(null);
+      setProfileError("");
       return;
     }
     let active = true;
-    db.from("pari_profiles")
-      .select("*")
-      .eq("id", session.user.id)
-      .single()
-      .then(({ data, error }) => {
+    const userId = session.user.id;
+    setProfileError("");
+    loadOwnProfile(db, userId)
+      .then((data) => {
+        if (active) setProfile(data);
+      })
+      .catch(() => {
         if (active) {
-          setProfile(data);
-          if (error) setError(error.message);
+          setProfile(null);
+          setProfileError(
+            "No pudimos cargar tu perfil. Recarga la página para volver a intentarlo.",
+          );
         }
+      })
+      .finally(() => {
+        if (active) setProfileUserId(userId);
       });
     return () => {
       active = false;
@@ -191,6 +206,9 @@ export default function TicketApp({ db, mode = "client" }) {
           </Notice>
         )}
         {error && <Notice onClose={() => setError("")}>{error}</Notice>}
+        {profileError && (
+          <Notice onClose={() => setProfileError("")}>{profileError}</Notice>
+        )}
         {!ready ? (
           <Empty title="Conectando con Ticket Pari…" />
         ) : selected ? (
@@ -228,6 +246,8 @@ export default function TicketApp({ db, mode = "client" }) {
             open={openEvent}
             explore={() => go("discover")}
           />
+        ) : view === "profile" && profileLoading ? (
+          <Empty title="Cargando tu perfil…" />
         ) : view === "profile" ? (
           <Profile
             db={db}
@@ -241,7 +261,7 @@ export default function TicketApp({ db, mode = "client" }) {
           <Auth db={db} />
         ) : view === "tickets" ? (
           <MyTickets db={db} session={session} />
-        ) : (view === "create" || view === "manage") && !profile ? (
+        ) : (view === "create" || view === "manage") && profileLoading ? (
           <Empty title="Comprobando acceso…" />
         ) : (view === "create" || view === "manage") && !organizerAllowed ? (
           <Empty title="Este espacio es para organizadores autorizados">
