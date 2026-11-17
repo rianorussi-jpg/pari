@@ -54,3 +54,7 @@ Proyectos existentes: `pari-client`, `pari-business` y `pari-admin`. Cada proyec
 Aplicar `supabase/migrations/20261116233225_curated_organizers_checkout.sql` (copia: `supabase/patch-checkout-organizers.sql`) después de la migración Ticket Pari. Añade datos de asistente a las órdenes con los mismos permisos de lectura existentes. La función `pari_checkout_demo` valida estos datos y usa la compra transaccional existente. Los reintentos no cambian al asistente ni duplican el inventario.
 
 La aplicación de clientes no ofrece crear eventos ni presenta Organizar en su navegación. Guardados conserva IDs de eventos en localStorage, por cuenta/dispositivo; no sincroniza favoritos entre dispositivos. El panel business requiere una cuenta autorizada. Verificación de identidad y autorización para organizar son controles separados. Las cuentas de asistentes no pueden darse permisos a sí mismas. Retirar el acceso de organizador bloquea administración, órdenes e ingreso de sus eventos. Los datos y eventos existentes se conservan.
+
+## Cuentas anteriores a Pari
+
+Aplicar `supabase/migrations/20261117000845_ensure_own_profile.sql` (copia: `supabase/patch-ensure-profile.sql`). Al entrar, la app tolera que todavía no exista el perfil y lo inicializa mediante `pari_ensure_my_profile`, únicamente para la cuenta autenticada. El perfil nuevo siempre es de asistente; no se toman roles ni verificación de metadatos editables. Los perfiles y permisos existentes se conservan. No se crean perfiles masivamente para cuentas de otros sistemas de la base compartida.

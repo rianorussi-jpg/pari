@@ -9,7 +9,7 @@
     "dev:business": "npm --workspace @pari/business run dev",
     "dev:admin": "npm --workspace @pari/admin run dev",
     "build": "npm run build --workspaces",
-    "test": "node tests/time.test.mjs && node tests/database.test.mjs"
+    "test": "node tests/time.test.mjs && node tests/profile.test.mjs && node tests/database.test.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.16"
