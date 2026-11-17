@@ -15,6 +15,7 @@ let setup = fs
 await db.exec(setup);
 await db.exec(fs.readFileSync("supabase/patch-operacion-completa.sql", "utf8"));
 await db.exec(fs.readFileSync("supabase/patch-ticket-pari.sql", "utf8"));
+await db.exec(fs.readFileSync("supabase/patch-ensure-profile.sql", "utf8"));
 const organizer = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   buyer = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
   admin = "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
@@ -264,6 +265,50 @@ assert.equal(
 await denied(admin, "select public.pari_set_organizer($1,false)", [admin]);
 console.log(
   "PASS: curated organizer permissions, admin grants/revocation, attendee validation, saved checkout data and retry consistency",
+);
+// Simulate a pre-existing Auth account whose Pari profile was never created.
+await db.exec("reset role");
+await db.query("select set_config('request.jwt.claim.sub','',false)");
+const legacy = "abababab-abab-4bab-8bab-abababababab";
+await db.query(
+  `insert into auth.users(id,email,raw_user_meta_data) values($1,'legacy@example.invalid','{"full_name":"Cuenta anterior","phone":"5512345678","role":"admin","is_verified":true}')`,
+  [legacy],
+);
+await db.query("delete from public.pari_profiles where id=$1", [legacy]);
+const repaired = (
+  await as(legacy, "select public.pari_ensure_my_profile() as profile")
+).rows[0].profile;
+assert.equal(repaired.id, legacy);
+assert.equal(repaired.full_name, "Cuenta anterior");
+assert.equal(repaired.role, "client");
+assert.equal(repaired.is_verified, false);
+assert.equal(
+  (await as(legacy, "select public.pari_ensure_my_profile() as profile"))
+    .rows[0].profile.id,
+  legacy,
+);
+assert.equal(
+  (
+    await as(
+      legacy,
+      "select count(*)::integer as n from public.pari_profiles where id=$1",
+      [legacy],
+    )
+  ).rows[0].n,
+  1,
+);
+await denied(null, "select public.pari_ensure_my_profile()");
+const adminRecovered = (
+  await as(admin, "select public.pari_ensure_my_profile() as profile")
+).rows[0].profile;
+assert.equal(adminRecovered.role, "admin");
+const organizerRecovered = (
+  await as(organizer, "select public.pari_ensure_my_profile() as profile")
+).rows[0].profile;
+assert.equal(organizerRecovered.role, "business");
+assert.equal(organizerRecovered.is_verified, true);
+console.log(
+  "PASS: missing-profile recovery, idempotency, own-account-only access and preservation of trusted roles",
 );
 console.log(
   "PASS: migration, public catalog, ownership, role protection, verification, payment validation, stock, idempotency, order privacy, check-in and duplicate-entry rejection",
