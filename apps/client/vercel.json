@@ -1,6 +1,16 @@
 {
   "rewrites": [
-    { "source": "/admin", "destination": "/index.html" },
-    { "source": "/mis-eventos", "destination": "/index.html" }
+    {
+      "source": "/admin",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/mis-eventos",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/mis-boletos",
+      "destination": "/index.html"
+    }
   ]
 }
