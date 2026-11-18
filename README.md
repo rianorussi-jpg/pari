@@ -58,3 +58,13 @@ La aplicación de clientes no ofrece crear eventos ni presenta Organizar en su n
 ## Cuentas anteriores a Pari
 
 Aplicar `supabase/migrations/20261117000845_ensure_own_profile.sql` (copia: `supabase/patch-ensure-profile.sql`). Al entrar, la app tolera que todavía no exista el perfil y lo inicializa mediante `pari_ensure_my_profile`, únicamente para la cuenta autenticada. El perfil nuevo siempre es de asistente; no se toman roles ni verificación de metadatos editables. Los perfiles y permisos existentes se conservan. No se crean perfiles masivamente para cuentas de otros sistemas de la base compartida.
+
+### Administración y transferencias
+
+El panel global está en `/admin`. Los usuarios con eventos asignados pueden abrir `/mis-eventos` desde su perfil. La comisión es un importe fijo en MXN por boleto. Se registra en cada orden al apartar o comprar. Las estadísticas financieras excluyen las órdenes de prueba.
+
+Los comprobantes se guardan en el bucket privado `pari-receipts`. Un apartado sin comprobante vence al primero de estos plazos: 24 horas o el comienzo del evento. Una vez enviado el comprobante, la orden queda pendiente de revisión. La aprobación debe corresponder a un depósito verificado.
+
+#### Avisos de aprobación por correo
+
+La función Edge `pari-order-email` procesa las aprobaciones reales desde `pari_private.email_outbox`. Configura `PARI_SMTP_URL` con SMTP sobre TLS en el puerto 465, `PARI_EMAIL_FROM` con el remitente verificado y `PARI_MAIL_JOB_SECRET` con un secreto aleatorio exclusivo de este trabajo. Guarda el mismo secreto como `pari_mail_job_secret` en Vault. Configura un trabajo de Supabase Cron para invocarla por POST en `/functions/v1/pari-order-email` con el encabezado `x-pari-mail-secret` tomado de Vault. La función usa la conexión de base de datos del entorno de Supabase y procesa un correo por invocación. La entrega depende de las credenciales y del cron.
