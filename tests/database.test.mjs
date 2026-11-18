@@ -5,7 +5,7 @@ const db = new PGlite();
 await db.exec(`create role anon;create role authenticated;create role service_role;create schema auth;create schema storage;
 create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb default '{}');
 create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
-create table storage.buckets(id text primary key,name text,public boolean);
+create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
 create table storage.objects(id uuid default gen_random_uuid(),bucket_id text,name text);
 create function storage.foldername(text) returns text[] language sql as $$select string_to_array($1,'/')$$;
 grant usage on schema public,auth,storage to anon,authenticated;grant execute on function auth.uid() to anon,authenticated;`);
@@ -313,4 +313,46 @@ console.log(
 console.log(
   "PASS: migration, public catalog, ownership, role protection, verification, payment validation, stock, idempotency, order privacy, check-in and duplicate-entry rejection",
 );
+const owner = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+await db.exec("reset role; reset request.jwt.claim.sub");
+await db.query("insert into auth.users(id,email) values($1,'rianorussi@gmail.com')", [owner]);
+await db.exec(fs.readFileSync("supabase/migrations/20261118222308_admin_transferencias.sql","utf8"));
+assert.equal((await as(owner, "select role from public.pari_profiles where id=auth.uid()")).rows[0].role, "admin");
+const event = "22222222-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+await db.exec("reset role");
+await db.query(`insert into public.pari_events(id,title,starts_at,ticket_price,ticket_inventory,
+ commission_per_ticket,transfer_clabe,transfer_holder,transfer_concept)
+ values($1,'Transfer test',now()+interval '3 days',200,10,25,'012345678901234567','Ejemplo','Orden')`,[event]);
+await denied(other, "insert into public.pari_event_assignments values($1,$2)",[event,other]);
+await as(owner, "insert into public.pari_event_assignments values($1,$2)",[event,other]);
+assert.deepEqual((await as(other, "select id from public.pari_managed_events()")).rows.map(row=>row.id), [event]);
+await denied(other, "update public.pari_events set commission_per_ticket=0 where id=$1", [event]);
+const reserve = (request) => as(buyer,"select public.pari_reserve_transfer($1,2,$2,'Nombre Prueba','buyer@test.local',null) as order_data",[event,request]);
+const request = "eeeeeeee-bbbb-4eee-8eee-eeeeeeeeeeee";
+const transferOrder = (await reserve(request)).rows[0].order_data;
+assert.equal(transferOrder.status,"pending");
+assert.equal(transferOrder.qr_token,null);
+assert.equal(transferOrder.commission_total,50);
+assert.equal((await reserve(request)).rows[0].order_data.id,transferOrder.id);
+await denied(other,"select public.pari_review_transfer($1,true)",[transferOrder.id]);
+await denied(buyer,"select public.pari_submit_receipt($1,$2)",[transferOrder.id,transferOrder.id+"/missing"]);
+const path=transferOrder.id+"/example.pdf";
+await db.exec("reset role");
+await db.query("insert into storage.objects(bucket_id,name) values('pari-receipts',$1)",[path]);
+await as(buyer,"select public.pari_submit_receipt($1,$2)",[transferOrder.id,path]);
+await denied(organizer,"select public.pari_review_transfer($1,true)",[transferOrder.id]);
+await as(other,"select public.pari_review_transfer($1,true)",[transferOrder.id]);
+await denied(other,"select public.pari_review_transfer($1,true)",[transferOrder.id]);
+const approved = (await as(buyer,"select status, qr_token from public.pari_ticket_orders where id=$1",[transferOrder.id])).rows[0];
+assert.equal(approved.status,"paid");
+assert.ok(approved.qr_token);
+await db.exec("reset role");
+assert.equal((await db.query("select count(*)::int as n from pari_private.email_outbox")).rows[0].n,1);
+const lapse = (await reserve("eeeeeeee-cccc-4eee-8eee-eeeeeeeeeeee")).rows[0].order_data;
+await db.exec("reset role");
+await db.query("update public.pari_ticket_orders set reserved_until=now()-interval '1 hour' where id=$1",[lapse.id]);
+await db.exec("select pari_private.expire_reservations(); select pari_private.expire_reservations();");
+assert.equal((await db.query("select ticket_inventory from public.pari_events where id=$1",[event])).rows[0].ticket_inventory,8);
+assert.equal((await db.query("select status from public.pari_ticket_orders where id=$1",[lapse.id])).rows[0].status,"cancelled");
+console.log("PASS: event-specific permissions, commission snapshot, stock, receipt review, QR issuance, email queue and expiration");
 await db.close();
