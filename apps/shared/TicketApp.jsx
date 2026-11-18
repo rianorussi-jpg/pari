@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import "./ticket.css";
 import { TicketReceipt, DoorScanner } from "./Admission.jsx";
+import { TransferOrder, TransferReview, mxn } from "./Transfers.jsx";
 import Checkout from "./Checkout.jsx";
 import { loadOwnProfile } from "./profile.mjs";
 import { useSavedEvents, canOrganize } from "./saved.mjs";
@@ -60,17 +61,43 @@ export default function TicketApp({ db, mode = "client" }) {
     [storedProfile, setProfile] = useState(null),
     [profileUserId, setProfileUserId] = useState(null),
     [profileError, setProfileError] = useState(""),
-    [view, setView] = useState(mode === "client" ? "discover" : "manage"),
+    [view, setView] = useState(
+      () =>
+        ({ "/admin": "admin", "/mis-eventos": "manage" })[
+          window.location.pathname
+        ] || (mode === "client" ? "discover" : "manage"),
+    ),
     [selected, setSelected] = useState(null),
     [events, setEvents] = useState([]),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
-    [refresh, setRefresh] = useState(0);
+    [refresh, setRefresh] = useState(0),
+    [assignmentOwner, setAssignmentOwner] = useState(null);
   const profile =
     storedProfile?.id === session?.user?.id ? storedProfile : null;
   const profileLoading = Boolean(session && profileUserId !== session.user.id);
   const [saved, toggleSaved] = useSavedEvents(session?.user?.id);
-  const organizerAllowed = canOrganize(profile);
+  const admin = profile?.role === "admin";
+  const organizerAllowed =
+    canOrganize(profile) ||
+    (assignmentOwner === session?.user.id && !!assignmentOwner);
+  useEffect(() => {
+    if (!session) {
+      setAssignmentOwner(null);
+      return;
+    }
+    let active = true;
+    db.from("pari_event_assignments")
+      .select("event_id")
+      .eq("user_id", session.user.id)
+      .limit(1)
+      .then(({ data }) => {
+        if (active) setAssignmentOwner(data?.length ? session.user.id : null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [db, session?.user.id, refresh]);
   const clearEventLink = () => {
     const url = new URL(window.location.href);
     if (!url.searchParams.has("evento")) return;
@@ -163,6 +190,16 @@ export default function TicketApp({ db, mode = "client" }) {
   }, [refresh]);
   const go = (v) => {
     clearEventLink();
+    if (mode === "client") {
+      const path =
+        v === "admin" || v === "create"
+          ? "/admin"
+          : v === "manage"
+            ? "/mis-eventos"
+            : "/";
+      if (window.location.pathname !== path)
+        window.history.replaceState(null, "", path);
+    }
     setSelected(null);
     setView(v);
     setError("");
@@ -203,7 +240,15 @@ export default function TicketApp({ db, mode = "client" }) {
           </button>
         </nav>
         <div className="header-actions">
-          {mode !== "client" && organizerAllowed && (
+          {admin && mode === "client" && (
+            <button
+              className="secondary admin-menu"
+              onClick={() => go("admin")}
+            >
+              <LayoutDashboard size={17} /> Administración
+            </button>
+          )}
+          {mode !== "client" && admin && (
             <button className="publish" onClick={() => go("create")}>
               <Plus size={16} />
               Crear evento
@@ -273,7 +318,8 @@ export default function TicketApp({ db, mode = "client" }) {
             session={session}
             profile={profile}
             reload={reload}
-            manage={() => go("manage")}
+            manage={() => go(admin ? "admin" : "manage")}
+            admin={admin}
             organizerAllowed={organizerAllowed}
           />
         ) : !session ? (
@@ -285,9 +331,10 @@ export default function TicketApp({ db, mode = "client" }) {
             session={session}
             explore={() => go("discover")}
           />
-        ) : (view === "create" || view === "manage") && profileLoading ? (
+        ) : ["create", "manage", "admin"].includes(view) && profileLoading ? (
           <Empty title="Comprobando acceso…" />
-        ) : (view === "create" || view === "manage") && !organizerAllowed ? (
+        ) : ((view === "create" || view === "admin") && !admin) ||
+          (view === "manage" && !organizerAllowed && mode !== "client") ? (
           <Empty title="Este espacio es para organizadores autorizados">
             <p>
               Descubre tu próximo evento y encuentra tus boletos desde tu
@@ -301,13 +348,14 @@ export default function TicketApp({ db, mode = "client" }) {
           <EventForm
             db={db}
             session={session}
+            admin={admin}
             done={() => {
               reload();
-              go("manage");
+              go("admin");
             }}
-            cancel={() => go("manage")}
+            cancel={() => go("admin")}
           />
-        ) : view === "manage" ? (
+        ) : view === "manage" || view === "admin" ? (
           <Organizer
             db={db}
             session={session}
@@ -866,7 +914,15 @@ function Field({ label, ...props }) {
     </label>
   );
 }
-function Profile({ db, session, profile, reload, manage, organizerAllowed }) {
+function Profile({
+  db,
+  session,
+  profile,
+  reload,
+  manage,
+  organizerAllowed,
+  admin,
+}) {
   const [editing, setEditing] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -970,7 +1026,7 @@ function Profile({ db, session, profile, reload, manage, organizerAllowed }) {
           </button>
           {organizerAllowed && (
             <button className="primary" onClick={manage}>
-              Administrar mis eventos
+              {admin ? "Administración" : "Mis eventos"}
               <ArrowUpRight size={16} />
             </button>
           )}
@@ -1032,6 +1088,15 @@ function EventPage({
       if (err.name !== "AbortError") setShareMessage(url.href);
     }
   }
+  if (order?.status !== "paid" && order)
+    return (
+      <section className="narrow success">
+        <TransferOrder db={db} order={{ ...order, pari_events: e }} />
+        <button className="primary" onClick={tickets}>
+          Ver mis boletos <ArrowUpRight size={16} />
+        </button>
+      </section>
+    );
   if (order)
     return (
       <section className="narrow success">
@@ -1193,29 +1258,57 @@ function MyTickets({ db, session, explore }) {
   const [orders, setOrders] = useState(null),
     [error, setError] = useState("");
   useEffect(() => {
-    db.from("pari_ticket_orders")
-      .select(
-        "*,pari_events(title,starts_at,venue_name,time_zone,city,category)",
-      )
-      .eq("user_id", session.user.id)
-      .order("created_at", { ascending: false })
-      .then(({ data, error }) => {
-        setOrders(data || []);
-        if (error) setError(error.message);
-      });
-  }, [session.user.id]);
+    let active = true;
+    const load = () =>
+      db
+        .from("pari_ticket_orders")
+        .select(
+          "*,pari_events(title,starts_at,venue_name,time_zone,city,category)",
+        )
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false })
+        .then(({ data, error }) => {
+          if (!active) return;
+          if (error) setError(error.message);
+          else {
+            setOrders(data || []);
+            setError("");
+          }
+        });
+    load();
+    const timer = setInterval(load, 15000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [db, session.user.id]);
   return (
     <section className="content-section">
       <span className="eyebrow">TUS PRÓXIMAS HISTORIAS</span>
       <h1>Mis boletos</h1>
       {error && <Notice>{error}</Notice>}
-      {orders === null ? (
+      {orders === null && !error ? (
         <Empty title="Cargando tus boletos…" />
-      ) : orders.length ? (
+      ) : orders?.length ? (
         <div className="tickets-grid">
-          {orders.map((o) => (
-            <TicketReceipt key={o.id} order={o} />
-          ))}
+          {orders.map((o) =>
+            o.payment_method === "transfer" && o.status !== "paid" ? (
+              <TransferOrder
+                key={o.id + o.status + (o.receipt_path || "")}
+                db={db}
+                order={o}
+                onUpdate={(next) =>
+                  setOrders((all) =>
+                    all.map((old) =>
+                      old.id === next.id ? { ...old, ...next } : old,
+                    ),
+                  )
+                }
+              />
+            ) : (
+              <TicketReceipt key={o.id} order={o} />
+            ),
+          )}
         </div>
       ) : (
         <Empty title="Tu próximo plan te espera">
@@ -1228,7 +1321,7 @@ function MyTickets({ db, session, explore }) {
     </section>
   );
 }
-function EventForm({ db, session, event, done, cancel }) {
+function EventForm({ db, session, event, done, cancel, admin }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [preview, setPreview] = useState(event?.image_url || "");
@@ -1281,6 +1374,12 @@ function EventForm({ db, session, event, done, cancel }) {
         status: f.get("status"),
         type: "other",
       };
+      payload.transfer_clabe = f.get("transfer_clabe").trim();
+      payload.transfer_holder = f.get("transfer_holder").trim();
+      payload.transfer_concept = f.get("transfer_concept").trim();
+      if (admin) payload.commission_per_ticket = Number(f.get("commission"));
+      if (payload.commission_per_ticket > payload.ticket_price)
+        throw Error("La comisión por boleto no puede superar su precio.");
       if (!event) payload.organizer_id = session.user.id;
       const { error } = event
         ? await db.from("pari_events").update(payload).eq("id", event.id)
@@ -1302,7 +1401,8 @@ function EventForm({ db, session, event, done, cancel }) {
       <span className="eyebrow">EL PRÓXIMO GRAN PLAN LO CREAS TÚ</span>
       <h1>{event ? "Edita tu evento" : "Dale vida a tu evento."}</h1>
       <p className="muted">
-        Publica en la ciudad que quieras. Los pagos están en modo de prueba.
+        Configura precios, disponibilidad y los datos de transferencia de tu
+        evento.
       </p>
       <form onSubmit={save} className="event-form">
         <section className="panel">
@@ -1441,6 +1541,46 @@ function EventForm({ db, session, event, done, cancel }) {
           </label>
         </section>
         {error && <Notice>{error}</Notice>}
+        <section className="panel">
+          <h2>Transferencia bancaria</h2>
+          <p className="muted">
+            Estos datos se guardan en cada nuevo apartado. Con la CLABE en
+            ceros, las transferencias son de prueba.
+          </p>
+          <Field
+            label="CLABE de 18 dígitos"
+            name="transfer_clabe"
+            inputMode="numeric"
+            pattern="[0-9]{18}"
+            defaultValue={event?.transfer_clabe || "000000000000000000"}
+            required
+          />
+          <Field
+            label="Titular de la cuenta"
+            name="transfer_holder"
+            maxLength={150}
+            defaultValue={event?.transfer_holder || "0"}
+            required
+          />
+          <Field
+            label="Concepto de transferencia"
+            name="transfer_concept"
+            maxLength={100}
+            defaultValue={event?.transfer_concept || "0"}
+            required
+          />
+          {admin && (
+            <Field
+              label="Comisión por boleto (MXN)"
+              name="commission"
+              type="number"
+              min="0"
+              step=".01"
+              defaultValue={event?.commission_per_ticket ?? 0}
+              required
+            />
+          )}
+        </section>
         <div className="form-actions">
           <button type="button" className="secondary" onClick={cancel}>
             Cancelar
@@ -1458,6 +1598,7 @@ function Organizer({ db, session, profile, create, reload, refresh, mode }) {
   const [events, setEvents] = useState([]),
     [orders, setOrders] = useState([]),
     [users, setUsers] = useState([]),
+    [assignments, setAssignments] = useState([]),
     [tab, setTab] = useState("events"),
     [edit, setEdit] = useState(null),
     [error, setError] = useState(""),
@@ -1477,32 +1618,22 @@ function Organizer({ db, session, profile, create, reload, refresh, mode }) {
     setLoading(true);
     (async () => {
       try {
-        let query = db
-          .from("pari_events")
-          .select("*")
-          .order("created_at", { ascending: false });
-        if (!admin) {
-          const { data: members, error } = await db
-            .from("pari_venue_members")
-            .select("venue_id")
-            .eq("user_id", session.user.id);
-          if (error) throw error;
-          const ids = (members || []).map((m) => m.venue_id);
-          query = query.or(
-            `organizer_id.eq.${session.user.id}${ids.length ? `,venue_id.in.(${ids.join(",")})` : ""}`,
-          );
-        }
-        const { data: es, error } = await query;
+        const { data: es, error } = await db.rpc("pari_managed_events");
         if (error) throw error;
         const ids = (es || []).map((e) => e.id);
-        const { data: os, error: oe } = ids.length
-          ? await db
-              .from("pari_ticket_orders")
-              .select("*")
-              .in("event_id", ids)
-              .order("created_at", { ascending: false })
-          : { data: [] };
-        if (oe) throw oe;
+        const os = [];
+        for (let offset = 0; ids.length; offset += 500) {
+          const { data, error } = await db
+            .from("pari_ticket_orders")
+            .select("*")
+            .in("event_id", ids)
+            .order("created_at", { ascending: false })
+            .order("id")
+            .range(offset, offset + 499);
+          if (error) throw error;
+          os.push(...data);
+          if (data.length < 500) break;
+        }
         let us = [];
         if (admin) {
           const { data, error } = await db
@@ -1511,6 +1642,11 @@ function Organizer({ db, session, profile, create, reload, refresh, mode }) {
             .order("created_at", { ascending: false });
           if (error) throw error;
           us = data || [];
+          const { data: assigned, error: assignmentError } = await db
+            .from("pari_event_assignments")
+            .select("*");
+          if (assignmentError) throw assignmentError;
+          if (active) setAssignments(assigned);
         }
         if (active) {
           setEvents(es || []);
@@ -1527,6 +1663,33 @@ function Organizer({ db, session, profile, create, reload, refresh, mode }) {
       active = false;
     };
   }, [session.user.id, profile?.role, refresh, admin]);
+  async function assign(event) {
+    event.preventDefault();
+    const fields = new FormData(event.currentTarget);
+    setBusy(true);
+    setError("");
+    const { error } = await db.from("pari_event_assignments").insert({
+      event_id: fields.get("event"),
+      user_id: fields.get("user"),
+    });
+    if (error)
+      setError(
+        error.code === "23505"
+          ? "El usuario ya tiene acceso a este evento."
+          : error.message,
+      );
+    else reload();
+    setBusy(false);
+  }
+  async function unassign(assignment) {
+    const { error } = await db
+      .from("pari_event_assignments")
+      .delete()
+      .eq("event_id", assignment.event_id)
+      .eq("user_id", assignment.user_id);
+    if (error) setError(error.message);
+    else reload();
+  }
   async function verify(user) {
     setBusy(true);
     setError("");
@@ -1567,9 +1730,18 @@ function Organizer({ db, session, profile, create, reload, refresh, mode }) {
     }
     setBusy(false);
   }
-  const paid = orders.filter((o) => o.status === "paid"),
+  const paid = orders.filter(
+      (o) =>
+        o.status === "paid" &&
+        (eventFilter === "all" || o.event_id === eventFilter),
+    ),
     sold = paid.reduce((n, o) => n + o.quantity, 0),
-    total = paid.reduce((n, o) => n + Number(o.total), 0),
+    real = paid.filter((o) => !o.is_demo),
+    total = real.reduce((n, o) => n + Number(o.total), 0),
+    net = real.reduce(
+      (n, o) => n + Number(o.total) - Number(o.commission_total),
+      0,
+    ),
     rows = orders.filter(
       (o) => eventFilter === "all" || o.event_id === eventFilter,
     );
@@ -1587,6 +1759,7 @@ function Organizer({ db, session, profile, create, reload, refresh, mode }) {
         db={db}
         session={session}
         event={edit}
+        admin={admin}
         done={() => {
           setEdit(null);
           reload();
@@ -1610,10 +1783,12 @@ function Organizer({ db, session, profile, create, reload, refresh, mode }) {
             evento.
           </p>
         </div>
-        <button className="primary" onClick={create}>
-          <Plus size={18} />
-          Crear evento
-        </button>
+        {admin && (
+          <button className="primary" onClick={create}>
+            <Plus size={18} />
+            Crear evento
+          </button>
+        )}
       </div>
       <div className="stats">
         <div>
@@ -1629,9 +1804,14 @@ function Organizer({ db, session, profile, create, reload, refresh, mode }) {
           <small>Compras confirmadas</small>
         </div>
         <div>
-          <span>Ventas simuladas</span>
-          <b>{money(total)}</b>
-          <small>MXN · sin cobros reales</small>
+          <span>Venta confirmada</span>
+          <b>{mxn(total)}</b>
+          <small>MXN · transferencias reales</small>
+        </div>
+        <div>
+          <span>Neto después de comisión</span>
+          <b>{mxn(net)}</b>
+          <small>{mxn(total - net)} MXN de comisión</small>
         </div>
         <div>
           <span>Accesos registrados</span>
@@ -1643,12 +1823,32 @@ function Organizer({ db, session, profile, create, reload, refresh, mode }) {
           <small>Boletos con ingreso</small>
         </div>
       </div>
+      <label className="field dashboard-filter">
+        <span>Estadísticas y órdenes por evento</span>
+        <select
+          value={eventFilter}
+          onChange={(e) => setEventFilter(e.target.value)}
+        >
+          <option value="all">Todos los eventos a mi cargo</option>
+          {events.map((event) => (
+            <option key={event.id} value={event.id}>
+              {event.title}
+            </option>
+          ))}
+        </select>
+      </label>
       <div className="dashboard-tabs">
         {[
           ["events", "Mis eventos"],
           ["orders", "Ventas y asistentes"],
+          ["transfers", "Transferencias"],
           ["checkin", "Control de acceso"],
-          ...(admin ? [["users", "Accesos y verificación"]] : []),
+          ...(admin
+            ? [
+                ["assignments", "Asignar eventos"],
+                ["users", "Accesos y verificación"],
+              ]
+            : []),
         ].map(([id, t]) => (
           <button
             key={id}
@@ -1704,29 +1904,23 @@ function Organizer({ db, session, profile, create, reload, refresh, mode }) {
           </div>
         ) : (
           <Empty title="Tu primer evento empieza aquí">
-            <p>Publica una fiesta, un show o esa idea que traes en mente.</p>
-            <button className="primary" onClick={create}>
-              Crear evento
-              <Plus size={17} />
-            </button>
+            <p>
+              {admin
+                ? "Crea y publica tu primer evento."
+                : "Los eventos que administración te asigne aparecerán aquí."}
+            </p>
+            {admin && (
+              <button className="primary" onClick={create}>
+                Crear evento
+                <Plus size={17} />
+              </button>
+            )}
           </Empty>
         )
       ) : tab === "orders" ? (
         <section className="panel">
           <div className="panel-heading">
             <h2>Ventas y asistentes</h2>
-            <select
-              aria-label="Filtrar ventas por evento"
-              value={eventFilter}
-              onChange={(e) => setEventFilter(e.target.value)}
-            >
-              <option value="all">Todos mis eventos</option>
-              {events.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.title}
-                </option>
-              ))}
-            </select>
           </div>
           <div className="table-scroll">
             <table>
@@ -1757,9 +1951,21 @@ function Organizer({ db, session, profile, create, reload, refresh, mode }) {
                     <td>{money(o.total)}</td>
                     <td>
                       <span className="badge">
-                        {o.status === "paid" ? "Confirmada" : o.status}
+                        {
+                          {
+                            paid: "Confirmada",
+                            pending: "Pendiente",
+                            cancelled: "Cancelada",
+                            refunded: "Reembolsada",
+                          }[o.status]
+                        }
                       </span>
-                      {o.is_demo && <small>Prueba</small>}
+                      <small>
+                        {o.payment_method === "transfer"
+                          ? "Transferencia"
+                          : "Tarjeta"}
+                        {o.is_demo && " · Prueba"}
+                      </small>
                     </td>
                     <td>{o.checked_in_at ? "Registrado" : "Sin ingreso"}</td>
                   </tr>
@@ -1772,6 +1978,48 @@ function Organizer({ db, session, profile, create, reload, refresh, mode }) {
               </p>
             )}
           </div>
+        </section>
+      ) : tab === "transfers" ? (
+        <TransferReview db={db} orders={rows} refresh={reload} />
+      ) : tab === "assignments" && admin ? (
+        <section className="panel">
+          <h2>Asignar un evento</h2>
+          <form onSubmit={assign} className="event-form">
+            <label className="field">
+              <span>Evento</span>
+              <select name="event" required>
+                {events.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>Usuario</span>
+              <select name="user" required>
+                {users
+                  .filter((u) => u.role !== "admin")
+                  .map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.full_name || u.email} · {u.email}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <button className="primary" disabled={busy || !events.length}>
+              Dar acceso al evento
+            </button>
+          </form>
+          {assignments.map((a) => (
+            <div key={a.event_id + a.user_id} className="transfer-review">
+              <b>{events.find((e) => e.id === a.event_id)?.title}</b>
+              <p>{users.find((u) => u.id === a.user_id)?.email}</p>
+              <button className="secondary" onClick={() => unassign(a)}>
+                Retirar asignación
+              </button>
+            </div>
+          ))}
         </section>
       ) : tab === "checkin" ? (
         <form className="panel checkin" onSubmit={checkin}>

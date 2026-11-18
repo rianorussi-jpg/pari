@@ -37,6 +37,7 @@ export default function Checkout({
       email: session?.user?.email || "",
       phone: profile?.phone || "",
     }),
+    [method, setMethod] = useState("card"),
     [card, setCard] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
@@ -103,15 +104,26 @@ export default function Checkout({
     setBusy(true);
     setError("");
     try {
-      const { data, error } = await db.rpc("pari_checkout_demo", {
+      const request = {
         p_event_id: event.id,
         p_quantity: quantity,
-        p_card: card.replace(/\s/g, ""),
         p_request_id: requestId,
-        p_attendee_name: attendee.name.trim(),
-        p_attendee_email: attendee.email.trim(),
-        p_attendee_phone: attendee.phone.trim(),
-      });
+      };
+      const { data, error } =
+        method === "transfer"
+          ? await db.rpc("pari_reserve_transfer", {
+              ...request,
+              p_name: attendee.name.trim(),
+              p_email: attendee.email.trim(),
+              p_phone: attendee.phone.trim(),
+            })
+          : await db.rpc("pari_checkout_demo", {
+              ...request,
+              p_card: card.replace(/\s/g, ""),
+              p_attendee_name: attendee.name.trim(),
+              p_attendee_email: attendee.email.trim(),
+              p_attendee_phone: attendee.phone.trim(),
+            });
       if (error) throw error;
       setCard("");
       onSuccess(data);
@@ -343,44 +355,72 @@ export default function Checkout({
                   Editar
                 </button>
               </div>
-              <div className="payment-method">
-                <span>
-                  <CreditCard size={20} />
-                  <b>Tarjeta</b>
-                </span>
-                <span className="badge">SIMULACIÓN</span>
-              </div>
-              <div className="demo-note">
-                <b>Estás probando Ticket Pari</b>
-                <span>
-                  No se realizará ningún cobro. Usa 1234 1234 1234 1234; no
-                  introduzcas una tarjeta real.
-                </span>
-              </div>
               <label className="field">
-                <span>Número de tarjeta de prueba</span>
-                <input
-                  aria-label="Número de tarjeta de prueba"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  value={card}
-                  onChange={(e) =>
-                    setCard(
-                      e.target.value
-                        .replace(/\D/g, "")
-                        .slice(0, 16)
-                        .replace(/(.{4})/g, "$1 ")
-                        .trim(),
-                    )
-                  }
-                  placeholder="1234 1234 1234 1234"
-                  pattern="1234 1234 1234 1234"
-                  title="Usa la tarjeta de prueba 1234 1234 1234 1234"
-                  maxLength={19}
+                <span>Método de pago</span>
+                <select
+                  value={method}
                   disabled={busy}
-                  required
-                />
+                  onChange={(e) => {
+                    setMethod(e.target.value);
+                    setRequestId(crypto.randomUUID());
+                    setError("");
+                  }}
+                >
+                  <option value="card">Tarjeta de prueba</option>
+                  <option value="transfer">Transferencia bancaria</option>
+                </select>
               </label>
+              {method === "transfer" ? (
+                <div className="demo-note">
+                  <b>Aparta y paga por transferencia</b>
+                  <span>
+                    Después de confirmar verás la cuenta y podrás subir el
+                    comprobante. El QR se habilita cuando el organizador apruebe
+                    el pago.
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <div className="payment-method">
+                    <span>
+                      <CreditCard size={20} />
+                      <b>Tarjeta</b>
+                    </span>
+                    <span className="badge">SIMULACIÓN</span>
+                  </div>
+                  <div className="demo-note">
+                    <b>Estás probando Ticket Pari</b>
+                    <span>
+                      No se realizará ningún cobro. Usa 1234 1234 1234 1234; no
+                      introduzcas una tarjeta real.
+                    </span>
+                  </div>
+                  <label className="field">
+                    <span>Número de tarjeta de prueba</span>
+                    <input
+                      aria-label="Número de tarjeta de prueba"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      value={card}
+                      onChange={(e) =>
+                        setCard(
+                          e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 16)
+                            .replace(/(.{4})/g, "$1 ")
+                            .trim(),
+                        )
+                      }
+                      placeholder="1234 1234 1234 1234"
+                      pattern="1234 1234 1234 1234"
+                      title="Usa la tarjeta de prueba 1234 1234 1234 1234"
+                      maxLength={19}
+                      disabled={busy}
+                      required
+                    />
+                  </label>
+                </>
+              )}
               {error && (
                 <div className="notice" role="alert">
                   {error}
@@ -395,12 +435,16 @@ export default function Checkout({
                 disabled={busy || !session}
               >
                 {busy
-                  ? "Confirmando tu compra…"
-                  : `Confirmar compra · ${money(total)}`}
+                  ? "Registrando tu orden…"
+                  : method === "transfer"
+                    ? "Confirmar y apartar boletos"
+                    : `Confirmar compra · ${money(total)}`}
                 <LockKeyhole size={17} />
               </button>
               <p className="secure-note">
-                Compra simulada · sin cargos reales · sin guardar tarjetas
+                {method === "card"
+                  ? "Compra simulada · sin cargos reales"
+                  : "Validación manual del comprobante"}
               </p>
             </form>
           )}

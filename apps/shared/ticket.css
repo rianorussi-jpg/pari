@@ -2598,3 +2598,13 @@ td small {
 .detail .share-event {float:right}
 .share-message {clear:both;text-align:right;overflow-wrap:anywhere;font-size:13px}
 .detail-cover {clear:both}
+
+.transfer-order dl {display:grid;grid-template-columns:auto 1fr;gap:8px 16px;text-align:left}
+.transfer-order dd {margin:0;overflow-wrap:anywhere;font-weight:700}
+.transfer-order form,.transfer-review {display:grid;gap:12px}
+.transfer-review {padding:18px 0;border-top:1px solid #ebe2da}
+.transfer-review h3,.transfer-review p {margin:0}
+.transfer-actions {display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.dashboard-filter {max-width:450px;margin:16px 0}
+.admin-menu {white-space:nowrap}
+@media(max-width:500px){.admin-menu {font-size:12px;padding:8px}.admin-menu svg{display:none}}
