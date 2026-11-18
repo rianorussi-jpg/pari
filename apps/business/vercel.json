@@ -1,5 +1,14 @@
 {
   "redirects": [
-    { "source": "/:path*", "destination": "https://pari.enla.mx/mis-eventos", "permanent": false }
+    {
+      "source": "/",
+      "destination": "https://pari.enla.mx/mis-eventos",
+      "permanent": false
+    },
+    {
+      "source": "/:path*",
+      "destination": "https://pari.enla.mx/mis-eventos",
+      "permanent": false
+    }
   ]
 }
