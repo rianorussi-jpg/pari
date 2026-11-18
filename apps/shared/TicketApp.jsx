@@ -24,8 +24,10 @@ import {
   ChevronRight,
   Download,
   Heart,
+  Share2,
 } from "lucide-react";
 import "./ticket.css";
+import { TicketReceipt, DoorScanner } from "./Admission.jsx";
 import Checkout from "./Checkout.jsx";
 import { loadOwnProfile } from "./profile.mjs";
 import { useSavedEvents, canOrganize } from "./saved.mjs";
@@ -69,7 +71,16 @@ export default function TicketApp({ db, mode = "client" }) {
   const profileLoading = Boolean(session && profileUserId !== session.user.id);
   const [saved, toggleSaved] = useSavedEvents(session?.user?.id);
   const organizerAllowed = canOrganize(profile);
+  const clearEventLink = () => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("evento")) return;
+    url.searchParams.delete("evento");
+    window.history.replaceState(null, "", url);
+  };
   const openEvent = (event) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("evento", event.id);
+    window.history.replaceState(null, "", url);
     setSelected(event);
     window.scrollTo(0, 0);
   };
@@ -133,6 +144,15 @@ export default function TicketApp({ db, mode = "client" }) {
       .then(({ data, error }) => {
         if (active) {
           setEvents(data || []);
+          const linkedId = new URLSearchParams(window.location.search).get(
+            "evento",
+          );
+          if (linkedId && mode === "client") {
+            const linked = (data || []).find((event) => event.id === linkedId);
+            if (linked) setSelected((current) => current || linked);
+            else if (!error && !selected)
+              setError("Este evento ya no está en cartelera.");
+          }
           setLoading(false);
           if (error) setError(error.message);
         }
@@ -142,6 +162,7 @@ export default function TicketApp({ db, mode = "client" }) {
     };
   }, [refresh]);
   const go = (v) => {
+    clearEventLink();
     setSelected(null);
     setView(v);
     setError("");
@@ -219,6 +240,7 @@ export default function TicketApp({ db, mode = "client" }) {
             session={session}
             profile={profile}
             back={() => {
+              clearEventLink();
               setSelected(null);
               window.scrollTo(0, 0);
             }}
@@ -230,10 +252,7 @@ export default function TicketApp({ db, mode = "client" }) {
           <Discover
             events={events}
             loading={loading}
-            open={(event) => {
-              setSelected(event);
-              window.scrollTo(0, 0);
-            }}
+            open={openEvent}
             saved={saved}
             toggleSaved={toggleSaved}
           />
@@ -260,7 +279,12 @@ export default function TicketApp({ db, mode = "client" }) {
         ) : !session ? (
           <Auth db={db} />
         ) : view === "tickets" ? (
-          <MyTickets db={db} session={session} />
+          <MyTickets
+            key={session.user.id}
+            db={db}
+            session={session}
+            explore={() => go("discover")}
+          />
         ) : (view === "create" || view === "manage") && profileLoading ? (
           <Empty title="Comprobando acceso…" />
         ) : (view === "create" || view === "manage") && !organizerAllowed ? (
@@ -388,12 +412,15 @@ function Discover({ events, loading, open, saved, toggleSaved }) {
         ? Number(a.ticket_price) - Number(b.ticket_price)
         : new Date(a.starts_at) - new Date(b.starts_at),
     );
+  const featured = events.find(
+    (e) => e.ticket_inventory === null || e.ticket_inventory > 0,
+  );
   return (
     <>
       <section className="hero">
         <div
           className="hero-image"
-          style={{ backgroundImage: `url(${img})` }}
+          style={{ backgroundImage: `url("${featured?.image_url || img}")` }}
         />
         <div className="hero-content">
           <span className="hero-label">
@@ -422,17 +449,23 @@ function Discover({ events, loading, open, saved, toggleSaved }) {
             <MapPin size={16} /> Ticket Pari, tu próximo plan
           </div>
         </div>
-        <div className="hero-sticker">
-          <Sparkles />
-          <span>
-            Nos vemos
-            <br />
-            <b>afuera.</b>
-          </span>
-        </div>
-        <span className="hero-bottom">
-          MÁS MOMENTOS. MENOS “A VER QUÉ HACEMOS”.
-        </span>
+        {featured && (
+          <button className="featured-pass" onClick={() => open(featured)}>
+            <span className="feature-kicker">
+              <Ticket size={17} /> Próximo en cartelera
+            </span>
+            <strong>{featured.title}</strong>
+            <span>
+              {date(featured.starts_at, featured.time_zone)} · {featured.city}
+            </span>
+            <span className="feature-action">
+              {money(featured.ticket_price)} MXN{" "}
+              <b>
+                Ver evento <ArrowUpRight size={16} />
+              </b>
+            </span>
+          </button>
+        )}
       </section>
       <section className="catalog" id="events">
         <div className="catalog-top">
@@ -983,7 +1016,22 @@ function EventPage({
 }) {
   const [qty, setQty] = useState(1),
     [checkout, setCheckout] = useState(false),
-    [order, setOrder] = useState(null);
+    [order, setOrder] = useState(null),
+    [shareMessage, setShareMessage] = useState("");
+  async function shareEvent() {
+    const url = new URL("https://pari.enla.mx/");
+    url.searchParams.set("evento", e.id);
+    try {
+      if (navigator.share)
+        await navigator.share({ title: e.title, url: url.href });
+      else {
+        await navigator.clipboard.writeText(url.href);
+        setShareMessage("Enlace copiado");
+      }
+    } catch (err) {
+      if (err.name !== "AbortError") setShareMessage(url.href);
+    }
+  }
   if (order)
     return (
       <section className="narrow success">
@@ -1034,13 +1082,23 @@ function EventPage({
         <ArrowLeft size={17} />
         Todos los eventos
       </button>
+      <button className="back-button share-event" onClick={shareEvent}>
+        <Share2 size={16} /> Compartir evento
+      </button>
+      {shareMessage && (
+        <p className="share-message" role="status">
+          {shareMessage}
+        </p>
+      )}
       <div className="detail-cover">
         <img src={e.image_url || img} alt={e.title} />
         <span>{e.category || "Evento"}</span>
       </div>
       <div className="detail-layout">
         <div className="detail-copy">
-          <span className="eyebrow">ESTE PLAN ES PARA TI</span>
+          <span className="eyebrow">
+            {e.category || "Evento"} · {e.city}
+          </span>
           <h1>{e.title}</h1>
           <div className="organizer-line">
             Organizado por <b>{e.organizer_name || "Ticket Pari"}</b>
@@ -1071,7 +1129,9 @@ function EventPage({
           </p>
         </div>
         <div className="checkout panel event-ticket-panel">
-          <span className="eyebrow">TU ACCESO AL PLAN</span>
+          <span className="eyebrow">
+            <Ticket size={16} /> BOLETO DIGITAL
+          </span>
           <h2>Acceso general</h2>
           <strong>
             {money(e.ticket_price)}
@@ -1122,49 +1182,21 @@ function EventPage({
             <ArrowUpRight size={18} />
           </button>
           <small className="secure-note">
-            Boletos digitales en tu perfil · Sin cargos adicionales
+            Recibe tu QR al confirmar · Sin cargos adicionales
           </small>
         </div>
       </div>
     </section>
   );
 }
-function TicketReceipt({ order: o }) {
-  return (
-    <article className="receipt">
-      <div className="receipt-head">
-        <Ticket />
-        <span>{o.is_demo ? "BOLETO DE PRUEBA" : "TICKET PARI"}</span>
-        <b>{o.status === "paid" ? "Confirmado" : o.status}</b>
-      </div>
-      <h3>{o.pari_events?.title || "Evento"}</h3>
-      {o.pari_events?.starts_at && (
-        <p>{date(o.pari_events.starts_at, o.pari_events.time_zone)}</p>
-      )}
-      <p>
-        {o.quantity} acceso{o.quantity > 1 ? "s" : ""} · {money(o.total)} MXN
-      </p>
-      {o.attendee_name && (
-        <p>
-          <b>Asistente:</b> {o.attendee_name}
-        </p>
-      )}
-      <div className="ticket-code">
-        <span>CÓDIGO DE ACCESO</span>
-        <code>{o.qr_token}</code>
-      </div>
-      <small>
-        Orden {o.id} {o.checked_in_at ? "· Ingreso registrado" : ""}
-      </small>
-    </article>
-  );
-}
-function MyTickets({ db, session }) {
+function MyTickets({ db, session, explore }) {
   const [orders, setOrders] = useState(null),
     [error, setError] = useState("");
   useEffect(() => {
     db.from("pari_ticket_orders")
-      .select("*,pari_events(title,starts_at,venue_name,time_zone)")
+      .select(
+        "*,pari_events(title,starts_at,venue_name,time_zone,city,category)",
+      )
       .eq("user_id", session.user.id)
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
@@ -1187,7 +1219,10 @@ function MyTickets({ db, session }) {
         </div>
       ) : (
         <Empty title="Tu próximo plan te espera">
-          <p>Los boletos que compres aparecerán aquí.</p>
+          <p>Aquí encontrarás el QR de cada compra para entrar al evento.</p>
+          <button className="primary" onClick={explore}>
+            Explorar la cartelera <ArrowUpRight size={16} />
+          </button>
         </Empty>
       )}
     </section>
@@ -1743,9 +1778,10 @@ function Organizer({ db, session, profile, create, reload, refresh, mode }) {
           <ScanLine size={40} />
           <h2>Bienvenidos al plan.</h2>
           <p>
-            Introduce el código de acceso que aparece en el boleto. Cada orden
-            permite un solo ingreso para todo el grupo.
+            Escanea el QR y confirma el ingreso. Si vienen en grupo, registra la
+            orden cuando estén todos.
           </p>
+          <DoorScanner onRead={setCode} />
           <Field
             label="Código de acceso"
             value={code}

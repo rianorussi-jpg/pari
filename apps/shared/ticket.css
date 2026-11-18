@@ -2549,3 +2549,52 @@ td small {
     max-width: 85%;
   }
 }
+
+/* The upcoming show doubles as the cover and a directly bookable event. */
+.hero {display:grid; grid-template-columns:minmax(0,1.45fr) minmax(240px,.75fr); align-items:end; gap:clamp(24px,5vw,85px); background:#20112c}
+.hero:after {background:linear-gradient(95deg,#1d1025f5 3%,#2c1326af 48%,#25132038),linear-gradient(0deg,#1a101c99,transparent 60%)}
+.hero-image {opacity:.94}
+.hero-content {align-self:center}
+.hero-content h1 {font-size:clamp(48px,5.4vw,82px)}
+.hero-content p {max-width:42ch;line-height:1.55;color:#f4edef}
+.hero .light-button {background:#ffdeb9;color:#30180b}
+.featured-pass {position:relative;z-index:1;display:grid;gap:13px;text-align:left;background:#fff8ed;color:#261821;border-radius:15px;padding:22px;box-shadow:0 12px 34px #130d1740;min-width:0}
+.featured-pass strong {font-size:clamp(20px,2.1vw,32px);line-height:1.03;letter-spacing:-.045em;overflow-wrap:anywhere}
+.featured-pass > span {font-size:13px}
+.feature-kicker,.feature-action,.feature-action b,.event-ticket-panel .eyebrow,.group-entry {display:flex;align-items:center;gap:8px}
+.feature-kicker {font-weight:700;color:#8e3d26}
+.feature-action {justify-content:space-between;border-top:1px dashed #cead96;padding-top:12px;font-weight:700}
+.feature-action b {color:#81301c}
+.event-ticket-panel {border-top:5px solid var(--orange)}
+.event-ticket-panel .eyebrow {font-size:11px}
+.group-entry {padding:12px;background:#fff1df;border-radius:8px;font-size:13px;text-align:left}
+.group-entry svg {flex-shrink:0}
+.admission-pass {width:100%;min-width:0;border:1px solid #d9cdbf;border-radius:18px;overflow:hidden;background:#fffaf3;text-align:left;box-shadow:0 8px 26px #3320160d}
+.admission-pass header {display:flex;align-items:center;gap:8px;padding:15px 22px;background:#251828;color:white}
+.admission-pass header strong {font-size:21px;letter-spacing:-.055em}
+.admission-pass header span {margin-left:auto;font-size:10px;letter-spacing:.09em;color:#ffd5ab}
+.pass-event,.pass-details,.pass-stub {padding:20px 24px}
+.pass-event small,.pass-details small {color:#775e51;font-size:12px}
+.pass-event h3 {font-size:clamp(23px,3.2vw,34px);line-height:1.08;letter-spacing:-.045em;margin:6px 0 12px;overflow-wrap:anywhere}
+.pass-event p {display:flex;align-items:center;gap:5px;margin:4px 0;font-size:14px}
+.pass-details {display:grid;grid-template-columns:1fr 1fr;gap:14px;padding-top:0}
+.pass-details div {display:grid;gap:3px;overflow-wrap:anywhere}
+.pass-details b {font-size:14px}
+.pass-stub {display:grid;justify-items:center;text-align:center;gap:8px;background:white;border-top:2px dashed #ddcdbc}
+.pass-stub p,.pass-stub summary {font-size:13px;line-height:1.5;margin:0}
+.pass-stub img {display:block;max-width:100%;height:auto}
+.pass-stub a {display:inline-flex;align-items:center;gap:7px;text-decoration:none}
+.pass-stub summary {cursor:pointer;padding:8px}
+.pass-stub code {display:block;font-size:12px;overflow-wrap:anywhere}
+.door-scanner {display:grid;gap:10px}
+.door-scanner video {width:100%;max-height:300px;object-fit:contain;background:#201a22;border-radius:12px}
+@media(max-width:760px){
+.hero {grid-template-columns:1fr;padding:28px 21px 19px;gap:22px}
+.hero-content h1 {font-size:clamp(43px,11vw,64px)}
+.featured-pass {gap:7px;padding:15px}
+.featured-pass strong {font-size:21px}
+.hero-location {margin-top:16px}
+}
+.detail .share-event {float:right}
+.share-message {clear:both;text-align:right;overflow-wrap:anywhere;font-size:13px}
+.detail-cover {clear:both}

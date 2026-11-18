@@ -135,9 +135,17 @@ export default function Checkout({
       <div className="checkout-heading">
         <span className="eyebrow">UN PASO MÁS CERCA DE TU PRÓXIMO PLAN</span>
         <h1 ref={heading} tabIndex={-1}>
-          Tus boletos, casi listos.
+          {
+            [
+              "Elige tus boletos.",
+              "Personaliza tu entrada.",
+              "Revisa y confirma.",
+            ][step - 1]
+          }
         </h1>
-        <p>Elige tus accesos y completa tu compra.</p>
+        <p>
+          {event.title} · {event.city}
+        </p>
       </div>
       <ol className="checkout-steps" aria-label="Progreso de compra">
         {["Boletos", "Tus datos", "Pago"].map((label, i) => (
@@ -198,7 +206,7 @@ export default function Checkout({
               <div className="purchase-benefits">
                 <span>
                   <Ticket size={17} />
-                  Boletos digitales en tu cuenta
+                  QR disponible al confirmar
                 </span>
                 <span>
                   <ShieldCheck size={17} />
@@ -299,7 +307,8 @@ export default function Checkout({
                   <p>
                     <b>Tu entrada siempre a la mano.</b>
                     <span>
-                      Al confirmar la compra aparecerá en “Mis boletos”.
+                      Tu QR quedará en Mis boletos. También podrás guardarlo en
+                      tu celular.
                     </span>
                   </p>
                 </div>
@@ -428,6 +437,12 @@ export default function Checkout({
               </b>
             </div>
           </div>
+          {quantity > 1 && (
+            <p className="group-entry">
+              <Ticket size={17} /> Un solo QR para {quantity} personas. El grupo
+              entra junto.
+            </p>
+          )}
           <p className="summary-footnote">
             Tu compra se confirma al completar el pago. La disponibilidad se
             valida en ese momento.
