@@ -63,9 +63,12 @@ export default function TicketApp({ db, mode = "client" }) {
     [profileError, setProfileError] = useState(""),
     [view, setView] = useState(
       () =>
-        ({ "/admin": "admin", "/mis-eventos": "manage" })[
-          window.location.pathname
-        ] || (mode === "client" ? "discover" : "manage"),
+        ({
+          "/admin": "admin",
+          "/mis-eventos": "manage",
+          "/mis-boletos": "tickets",
+        })[window.location.pathname] ||
+        (mode === "client" ? "discover" : "manage"),
     ),
     [selected, setSelected] = useState(null),
     [events, setEvents] = useState([]),
